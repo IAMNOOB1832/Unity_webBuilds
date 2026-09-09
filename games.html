@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Games — Build Archive</title>
+    <meta
+        name="description"
+        content="Games and development builds."
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Background -->
+    <div class="background-grid"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+
+    <!-- Navigation -->
+    <header class="navbar">
+        <div class="nav-container">
+
+            <a href="index.html" class="logo">
+                MY<span>GAME</span>
+            </a>
+
+            <nav>
+                <a href="games.html">Games</a>
+                <a href="login.html">Login</a>
+            </nav>
+
+        </div>
+    </header>
+
+
+    <!-- Main -->
+    <main>
+
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <div class="status-badge">
+                    <span class="status-dot"></span>
+                    GAME BUILD ARCHIVE
+                </div>
+
+                <h1>
+                    GAMES
+                </h1>
+
+                <p class="hero-subtitle">
+                    Explore games and their development builds.
+                </p>
+
+                <p class="hero-description">
+                    Browse games created by different developers
+                    and follow their development progress.
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- Games -->
+        <section class="section">
+
+            <div class="section-header">
+
+                <span class="section-number">01</span>
+
+                <div>
+                    <p class="section-label">
+                        GAME LIBRARY
+                    </p>
+
+                    <h2>
+                        All Games
+                    </h2>
+                </div>
+
+            </div>
+
+
+            <div id="games-container">
+
+                <div class="loading">
+                    Loading games...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Footer -->
+        <footer>
+
+            <div class="footer-content">
+
+                <div>
+
+                    <div class="logo">
+                        MY<span>GAME</span>
+                    </div>
+
+                    <p>
+                        An independent game build archive.
+                    </p>
+
+                </div>
+
+
+                <div class="footer-right">
+
+                    BUILD ARCHIVE<br>
+
+                    <span>
+                        GAMES
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-bottom">
+
+                <span>
+                    © 2026 My Game
+                </span>
+
+                <span>
+                    Built with Unity & WebGL
+                </span>
+
+            </div>
+
+        </footer>
+
+    </main>
+
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase.js"></script>
+
+    <script src="games.js"></script>
+
+</body>
+</html>
