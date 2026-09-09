@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Add Game — Game Builds</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">GAME BUILDS</a>
+
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="games.html">Games</a>
+                <a href="dashboard.html">Dashboard</a>
+
+                <button id="logout-button" class="nav-button">
+                    Log out
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+
+        <section class="hero">
+            <div class="hero-content">
+                <span class="eyebrow">NEW GAME</span>
+
+                <h1>Add a game.</h1>
+
+                <p>
+                    Create a new game and start adding builds.
+                </p>
+            </div>
+        </section>
+
+        <section class="build-section">
+
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">GAME DETAILS</span>
+                    <h2>Create game</h2>
+                </div>
+            </div>
+
+            <div class="build-card">
+
+                <form id="add-game-form">
+
+                    <div class="form-group">
+                        <label for="game-name">
+                            Game name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="game-name"
+                            placeholder="My Awesome Game"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="game-slug">
+                            Game slug
+                        </label>
+
+                        <input
+                            type="text"
+                            id="game-slug"
+                            placeholder="my-awesome-game"
+                            maxlength="100"
+                            required
+                        >
+
+                        <p class="form-help">
+                            This is used for the game URL.
+                        </p>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="game-description">
+                            Description
+                        </label>
+
+                        <textarea
+                            id="game-description"
+                            placeholder="Describe your game..."
+                            maxlength="1000"
+                            rows="6"
+                        ></textarea>
+                    </div>
+
+                    <div
+                        id="form-message"
+                        style="margin-bottom:20px;"
+                    ></div>
+
+                    <div
+                        style="
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                        "
+                    >
+
+                        <button
+                            type="submit"
+                            id="create-game-button"
+                            class="btn primary"
+                        >
+                            Create game
+                        </button>
+
+                        <a
+                            href="dashboard.html"
+                            class="btn"
+                        >
+                            Cancel
+                        </a>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>Game Builds</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="add-game.js"></script>
+
+</body>
+</html>
