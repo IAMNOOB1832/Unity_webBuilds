@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Game — Build Archive</title>
+    <meta
+        name="description"
+        content="Game development builds and history."
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Background -->
+    <div class="background-grid"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+
+    <!-- Navigation -->
+    <header class="navbar">
+
+        <div class="nav-container">
+
+            <a href="games.html" class="logo">
+                MY<span>GAME</span>
+            </a>
+
+            <nav>
+                <a href="games.html">Games</a>
+                <a href="login.html">Login</a>
+            </nav>
+
+        </div>
+
+    </header>
+
+
+    <!-- Main -->
+    <main>
+
+        <!-- Game Hero -->
+        <section class="hero">
+
+            <div class="hero-content">
+
+                <a
+                    href="games.html"
+                    class="back-link"
+                >
+                    ← BACK TO GAMES
+                </a>
+
+
+                <div
+                    id="game-status"
+                    class="status-badge"
+                >
+                    <span class="status-dot"></span>
+                    LOADING GAME
+                </div>
+
+
+                <h1 id="game-name">
+                    Loading...
+                </h1>
+
+
+                <p
+                    id="game-owner"
+                    class="hero-subtitle"
+                >
+                    Loading developer...
+                </p>
+
+
+                <p
+                    id="game-description"
+                    class="hero-description"
+                >
+                    Loading game information...
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- Latest Build -->
+        <section
+            id="latest"
+            class="section latest-section"
+        >
+
+            <div class="section-header">
+
+                <span class="section-number">
+                    01
+                </span>
+
+                <div>
+
+                    <p class="section-label">
+                        CURRENT VERSION
+                    </p>
+
+                    <h2>
+                        Latest Build
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div id="latest-build-container">
+
+                <div class="loading">
+                    Loading latest build...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Build History -->
+        <section
+            id="history"
+            class="section"
+        >
+
+            <div class="section-header">
+
+                <span class="section-number">
+                    02
+                </span>
+
+                <div>
+
+                    <p class="section-label">
+                        DEVELOPMENT TIMELINE
+                    </p>
+
+                    <h2>
+                        Build History
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div class="history-intro">
+
+                <p>
+                    Every playable build is kept here so you can
+                    follow how the game has evolved over time.
+                </p>
+
+            </div>
+
+
+            <div
+                id="build-history"
+                class="build-list"
+            >
+
+                <div class="loading">
+                    Loading build history...
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Footer -->
+        <footer>
+
+            <div class="footer-content">
+
+                <div>
+
+                    <div class="logo">
+                        MY<span>GAME</span>
+                    </div>
+
+                    <p>
+                        An independent game build archive.
+                    </p>
+
+                </div>
+
+
+                <div class="footer-right">
+
+                    BUILD ARCHIVE<br>
+
+                    <span id="footer-build-count">
+                        0 BUILDS
+                    </span>
+
+                </div>
+
+            </div>
+
+
+            <div class="footer-bottom">
+
+                <span>
+                    © 2026 My Game
+                </span>
+
+                <span>
+                    Game Build Archive
+                </span>
+
+            </div>
+
+        </footer>
+
+    </main>
+
+
+    <!-- Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="supabase.js"></script>
+
+    <script src="game.js"></script>
+
+</body>
+</html>
