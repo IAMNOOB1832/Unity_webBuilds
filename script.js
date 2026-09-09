@@ -16,6 +16,16 @@ const footerBuildCount =
 
 
 /* =========================================
+   SUPABASE
+========================================= */
+
+const supabaseClient = window.supabase.createClient(
+    SUPABASE_URL,
+    SUPABASE_KEY
+);
+
+
+/* =========================================
    LOAD BUILDS
 ========================================= */
 
@@ -23,13 +33,51 @@ async function loadBuilds() {
 
     try {
 
-        const response = await fetch("builds.json");
+        /*
+         * Find Pancakeria.
+         */
 
-        if (!response.ok) {
-            throw new Error("Could not load builds.json");
+        const { data: game, error: gameError } =
+            await supabaseClient
+                .from("games")
+                .select("id, name, slug")
+                .eq("slug", "pancakeria")
+                .single();
+
+        if (gameError) {
+            throw gameError;
         }
 
-        const builds = await response.json();
+
+        /*
+         * Load all builds for Pancakeria.
+         * Newest build first.
+         */
+
+        const { data: builds, error: buildsError } =
+            await supabaseClient
+                .from("builds")
+                .select(`
+                    id,
+                    version,
+                    build_date,
+                    status,
+                    description,
+                    url,
+                    created_at,
+                    build_changelog (
+                        change_text
+                    )
+                `)
+                .eq("game_id", game.id)
+                .order("build_date", {
+                    ascending: false
+                });
+
+        if (buildsError) {
+            throw buildsError;
+        }
+
 
         if (!Array.isArray(builds) || builds.length === 0) {
 
@@ -45,24 +93,59 @@ async function loadBuilds() {
                 </div>
             `;
 
+            buildCount.textContent = "0";
+
+            footerBuildCount.textContent = "0 BUILDS";
+
             return;
         }
 
 
         /*
-         * We assume the first build in builds.json
-         * is always the latest build.
+         * Convert Supabase data to the format
+         * our existing rendering functions expect.
          */
 
-        const latestBuild = builds[0];
+        const formattedBuilds = builds.map(build => ({
+
+            id: build.id,
+
+            version: build.version,
+
+            date: formatDate(build.build_date),
+
+            status: build.status,
+
+            description: build.description,
+
+            url: build.url,
+
+            changelog:
+                build.build_changelog?.map(
+                    item => item.change_text
+                ) || []
+
+        }));
+
+
+        /*
+         * The first build is the latest build.
+         */
+
+        const latestBuild = formattedBuilds[0];
 
 
         /* Build counter */
 
-        buildCount.textContent = builds.length;
+        buildCount.textContent =
+            formattedBuilds.length;
 
         footerBuildCount.textContent =
-            `${builds.length} ${builds.length === 1 ? "BUILD" : "BUILDS"}`;
+            `${formattedBuilds.length} ${
+                formattedBuilds.length === 1
+                    ? "BUILD"
+                    : "BUILDS"
+            }`;
 
 
         /* Render latest build */
@@ -72,12 +155,12 @@ async function loadBuilds() {
 
         /* Render history */
 
-        renderBuildHistory(builds);
+        renderBuildHistory(formattedBuilds);
 
 
     } catch (error) {
 
-        console.error(error);
+        console.error("Could not load builds:", error);
 
         latestContainer.innerHTML = `
             <div class="loading">
@@ -91,6 +174,33 @@ async function loadBuilds() {
             </div>
         `;
     }
+}
+
+
+/* =========================================
+   DATE FORMAT
+========================================= */
+
+function formatDate(date) {
+
+    if (!date) {
+        return "";
+    }
+
+    const parsedDate = new Date(date);
+
+    if (Number.isNaN(parsedDate.getTime())) {
+        return String(date);
+    }
+
+    return parsedDate.toLocaleDateString(
+        "en-GB",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        }
+    );
 }
 
 
@@ -113,7 +223,10 @@ function renderLatestBuild(build) {
 
                     <ul>
                         ${changelog
-                            .map(item => `<li>${escapeHTML(item)}</li>`)
+                            .map(
+                                item =>
+                                    `<li>${escapeHTML(item)}</li>`
+                            )
                             .join("")}
                     </ul>
 
@@ -175,7 +288,7 @@ function renderBuildHistory(builds) {
     historyContainer.innerHTML = "";
 
 
-    builds.forEach((build, index) => {
+    builds.forEach(build => {
 
         const item = document.createElement("div");
 
@@ -225,11 +338,6 @@ function renderBuildHistory(builds) {
 /* =========================================
    SECURITY
 ========================================= */
-
-/*
- * These functions prevent accidental HTML
- * injection when you add text to builds.json.
- */
 
 function escapeHTML(value) {
 
