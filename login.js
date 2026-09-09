@@ -19,18 +19,36 @@ loginForm.addEventListener("submit", async (event) => {
 
     loginMessage.textContent = "Logging in...";
 
-    const internalEmail =
-        `${username}@accounts.gamebuild.local`;
-
-    const { error } =
-        await supabaseClient.auth.signInWithPassword({
-            email: internalEmail,
-            password: password
+    const { data, error } =
+        await supabaseClient.functions.invoke("login-user", {
+            body: {
+                username: username,
+                password: password
+            }
         });
 
-    if (error) {
+    if (error || !data?.access_token) {
+        console.error(error, data);
+
         loginMessage.textContent =
-            "Username or password is incorrect.";
+            data?.error || "Username or password is incorrect.";
+
+        return;
+    }
+
+    // Save the Supabase session returned by our Edge Function.
+    const { error: sessionError } =
+        await supabaseClient.auth.setSession({
+            access_token: data.access_token,
+            refresh_token: data.refresh_token
+        });
+
+    if (sessionError) {
+        console.error(sessionError);
+
+        loginMessage.textContent =
+            "Login succeeded, but the session could not be created.";
+
         return;
     }
 
