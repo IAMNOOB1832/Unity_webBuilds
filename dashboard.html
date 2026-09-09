@@ -13,25 +13,56 @@
 
     <header class="navbar">
         <div class="nav-container">
-            <a href="index.html" class="logo">GAME BUILDS</a>
+
+            <a href="index.html" class="logo">
+                GAME BUILDS
+            </a>
 
             <nav>
-                <a href="index.html">Home</a>
-                <a href="games.html">Games</a>
-                <a href="dashboard.html">Dashboard</a>
 
-                <button id="logout-button" class="nav-button">
+                <a href="index.html">
+                    Home
+                </a>
+
+                <a href="games.html">
+                    Games
+                </a>
+
+                <a href="dashboard.html">
+                    Dashboard
+                </a>
+
+                <!-- Only visible to admins -->
+                <a
+                    href="admin.html"
+                    id="admin-nav-link"
+                    style="display:none;"
+                >
+                    Admin
+                </a>
+
+                <button
+                    id="logout-button"
+                    class="nav-button"
+                >
                     Log out
                 </button>
+
             </nav>
+
         </div>
     </header>
+
 
     <main>
 
         <section class="hero">
+
             <div class="hero-content">
-                <span class="eyebrow">DASHBOARD</span>
+
+                <span class="eyebrow">
+                    DASHBOARD
+                </span>
 
                 <h1 id="welcome-title">
                     Welcome.
@@ -40,68 +71,132 @@
                 <p>
                     Manage your games and builds.
                 </p>
+
             </div>
+
         </section>
+
 
         <section class="build-section">
 
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">YOUR GAMES</span>
-                    <h2>Your games</h2>
+
+                    <span class="eyebrow">
+                        YOUR GAMES
+                    </span>
+
+                    <h2>
+                        Your games
+                    </h2>
+
                 </div>
 
-                <button id="add-game-button" class="btn primary">
+
+                <button
+                    id="add-game-button"
+                    class="btn primary"
+                >
                     Add game
                 </button>
+
             </div>
 
-            <div id="games-list" class="build-history">
-                <p>Loading games...</p>
+
+            <div
+                id="games-list"
+                class="build-history"
+            >
+
+                <p>
+                    Loading games...
+                </p>
+
             </div>
 
         </section>
 
+
         <section class="build-section">
 
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">QUICK ACTIONS</span>
-                    <h2>Quick actions</h2>
+
+                    <span class="eyebrow">
+                        QUICK ACTIONS
+                    </span>
+
+                    <h2>
+                        Quick actions
+                    </h2>
+
                 </div>
+
             </div>
+
 
             <div id="quick-actions">
-                <p>Loading...</p>
+
+                <p>
+                    Loading...
+                </p>
+
             </div>
 
         </section>
 
+
         <section class="build-section">
 
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">ACCOUNT</span>
-                    <h2>Account</h2>
+
+                    <span class="eyebrow">
+                        ACCOUNT
+                    </span>
+
+                    <h2>
+                        Account
+                    </h2>
+
                 </div>
+
             </div>
 
-            <div id="account-info" class="build-card">
-                <p>Loading account...</p>
+
+            <div
+                id="account-info"
+                class="build-card"
+            >
+
+                <p>
+                    Loading account...
+                </p>
+
             </div>
 
         </section>
 
     </main>
 
+
     <footer class="footer">
-        <p>Game Builds</p>
+
+        <p>
+            Game Builds
+        </p>
+
     </footer>
 
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script src="supabase.js"></script>
+
     <script src="dashboard.js"></script>
 
 </body>
 </html>
-
