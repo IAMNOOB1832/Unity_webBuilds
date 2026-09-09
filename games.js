@@ -5,6 +5,9 @@
 const gamesContainer =
     document.getElementById("games-container");
 
+const userFilter =
+    document.getElementById("user-filter");
+
 
 /* =========================================
    SUPABASE
@@ -14,6 +17,15 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_URL,
     SUPABASE_KEY
 );
+
+
+/* =========================================
+   PAGE DATA
+========================================= */
+
+let allGames = [];
+let allBuilds = [];
+let allProfiles = [];
 
 
 /* =========================================
@@ -38,11 +50,7 @@ async function loadGames() {
                     description,
                     created_at,
                     owner_id
-                `)
-                .order("created_at", {
-                    ascending: false
-                });
-
+                `);
 
         if (gamesError) {
             throw gamesError;
@@ -108,7 +116,8 @@ async function loadGames() {
                 .select(`
                     id,
                     username,
-                    display_name
+                    display_name,
+                    is_admin
                 `)
                 .in("id", ownerIds);
 
@@ -119,13 +128,31 @@ async function loadGames() {
 
 
         /*
-         * Render everything.
+         * Store data globally.
+         */
+
+        allGames = games;
+        allBuilds = builds || [];
+        allProfiles = profiles || [];
+
+
+        /*
+         * Build user filter.
+         */
+
+        populateUserFilter(
+            allProfiles
+        );
+
+
+        /*
+         * Sort and render.
          */
 
         renderGames(
-            games,
-            builds || [],
-            profiles || []
+            allGames,
+            allBuilds,
+            allProfiles
         );
 
 
@@ -146,6 +173,170 @@ async function loadGames() {
 
 
 /* =========================================
+   USER FILTER
+========================================= */
+
+function populateUserFilter(
+    profiles
+) {
+
+    /*
+     * Remove old options except "All users".
+     */
+
+    userFilter.innerHTML = `
+        <option value="all">
+            All users
+        </option>
+    `;
+
+
+    /*
+     * Sort users:
+     *
+     * 1. Admin first
+     * 2. Then display name / username alphabetically
+     */
+
+    const sortedProfiles =
+        [...profiles].sort((a, b) => {
+
+            const adminA =
+                a.is_admin === true;
+
+            const adminB =
+                b.is_admin === true;
+
+
+            if (adminA && !adminB) {
+                return -1;
+            }
+
+            if (!adminA && adminB) {
+                return 1;
+            }
+
+
+            const nameA =
+                (
+                    a.display_name ||
+                    a.username ||
+                    ""
+                ).toLowerCase();
+
+            const nameB =
+                (
+                    b.display_name ||
+                    b.username ||
+                    ""
+                ).toLowerCase();
+
+
+            return nameA.localeCompare(
+                nameB
+            );
+        });
+
+
+    /*
+     * Create options.
+     */
+
+    sortedProfiles.forEach(profile => {
+
+        const option =
+            document.createElement("option");
+
+        option.value =
+            profile.id;
+
+
+        const displayName =
+            profile.display_name ||
+            profile.username ||
+            "Unknown developer";
+
+
+        if (profile.is_admin === true) {
+
+            option.textContent =
+                `Administrator — ${displayName}`;
+
+        } else {
+
+            option.textContent =
+                displayName;
+        }
+
+
+        userFilter.appendChild(
+            option
+        );
+    });
+
+
+    /*
+     * Filter games when selection changes.
+     */
+
+    userFilter.addEventListener(
+        "change",
+        handleUserFilter
+    );
+}
+
+
+/* =========================================
+   HANDLE FILTER
+========================================= */
+
+function handleUserFilter() {
+
+    const selectedUser =
+        userFilter.value;
+
+
+    if (selectedUser === "all") {
+
+        renderGames(
+            allGames,
+            allBuilds,
+            allProfiles
+        );
+
+        return;
+    }
+
+
+    const filteredGames =
+        allGames.filter(
+            game =>
+                game.owner_id ===
+                selectedUser
+        );
+
+
+    if (filteredGames.length === 0) {
+
+        gamesContainer.innerHTML = `
+            <div class="loading">
+                This user has no games yet.
+            </div>
+        `;
+
+        return;
+    }
+
+
+    renderGames(
+        filteredGames,
+        allBuilds,
+        allProfiles
+    );
+}
+
+
+/* =========================================
    RENDER GAMES
 ========================================= */
 
@@ -158,7 +349,99 @@ function renderGames(
     gamesContainer.innerHTML = "";
 
 
-    games.forEach(game => {
+    /*
+     * Sort games:
+     *
+     * 1. Admin games first
+     * 2. Then users alphabetically
+     * 3. Then newest games
+     */
+
+    const sortedGames =
+        [...games].sort((a, b) => {
+
+            const profileA =
+                profiles.find(
+                    profile =>
+                        profile.id ===
+                        a.owner_id
+                );
+
+            const profileB =
+                profiles.find(
+                    profile =>
+                        profile.id ===
+                        b.owner_id
+                );
+
+
+            const adminA =
+                profileA?.is_admin === true;
+
+            const adminB =
+                profileB?.is_admin === true;
+
+
+            /*
+             * Admin always comes first.
+             */
+
+            if (adminA && !adminB) {
+                return -1;
+            }
+
+            if (!adminA && adminB) {
+                return 1;
+            }
+
+
+            /*
+             * Sort by owner name.
+             */
+
+            const ownerA =
+                (
+                    profileA?.display_name ||
+                    profileA?.username ||
+                    ""
+                ).toLowerCase();
+
+            const ownerB =
+                (
+                    profileB?.display_name ||
+                    profileB?.username ||
+                    ""
+                ).toLowerCase();
+
+
+            const ownerCompare =
+                ownerA.localeCompare(
+                    ownerB
+                );
+
+
+            if (ownerCompare !== 0) {
+                return ownerCompare;
+            }
+
+
+            /*
+             * Same owner:
+             * newest game first.
+             */
+
+            return (
+                new Date(b.created_at) -
+                new Date(a.created_at)
+            );
+        });
+
+
+    /*
+     * Render cards.
+     */
+
+    sortedGames.forEach(game => {
 
         /*
          * Builds belonging to this game.
@@ -167,7 +450,8 @@ function renderGames(
         const gameBuilds =
             builds.filter(
                 build =>
-                    build.game_id === game.id
+                    build.game_id ===
+                    game.id
             );
 
 
@@ -194,7 +478,8 @@ function renderGames(
         const profile =
             profiles.find(
                 profile =>
-                    profile.id === game.owner_id
+                    profile.id ===
+                    game.owner_id
             );
 
 
@@ -211,7 +496,8 @@ function renderGames(
         const card =
             document.createElement("div");
 
-        card.className = "game-card";
+        card.className =
+            "game-card";
 
 
         card.innerHTML = `
@@ -301,8 +587,9 @@ function renderGames(
         `;
 
 
-        gamesContainer.appendChild(card);
-
+        gamesContainer.appendChild(
+            card
+        );
     });
 }
 
