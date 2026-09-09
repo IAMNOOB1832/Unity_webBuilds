@@ -3,6 +3,7 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_KEY
 );
 
+
 const usersList =
     document.getElementById("users-list");
 
@@ -30,8 +31,18 @@ const submitCreateUser =
 const logoutButton =
     document.getElementById("logout-button");
 
+const recentUploads =
+    document.getElementById("recent-uploads");
+
+
 let currentProfile = null;
+
 let users = [];
+
+
+/* =========================================
+   LOAD ADMIN PAGE
+========================================= */
 
 async function loadAdminPage() {
 
@@ -40,10 +51,15 @@ async function loadAdminPage() {
         error: userError
     } = await supabaseClient.auth.getUser();
 
+
     if (userError || !user) {
-        window.location.href = "login.html";
+
+        window.location.href =
+            "login.html";
+
         return;
     }
+
 
     const {
         data: profile,
@@ -61,6 +77,7 @@ async function loadAdminPage() {
         .eq("id", user.id)
         .single();
 
+
     if (profileError || !profile) {
 
         showAdminMessage(
@@ -70,19 +87,28 @@ async function loadAdminPage() {
         return;
     }
 
-    currentProfile = profile;
 
-    if (profile.is_admin !== true) {
+    currentProfile =
+        profile;
+
+
+    if (
+        profile.is_admin !== true
+    ) {
 
         document.querySelector("main").innerHTML = `
+
             <section class="hero">
+
                 <div class="hero-content">
 
                     <span class="eyebrow">
                         ACCESS DENIED
                     </span>
 
-                    <h1>No access.</h1>
+                    <h1>
+                        No access.
+                    </h1>
 
                     <p>
                         You do not have permission to access
@@ -97,23 +123,32 @@ async function loadAdminPage() {
                     </a>
 
                 </div>
+
             </section>
+
         `;
 
         return;
     }
 
-    if (profile.is_suspended === true) {
+
+    if (
+        profile.is_suspended === true
+    ) {
 
         document.querySelector("main").innerHTML = `
+
             <section class="hero">
+
                 <div class="hero-content">
 
                     <span class="eyebrow">
                         ACCOUNT SUSPENDED
                     </span>
 
-                    <h1>Access blocked.</h1>
+                    <h1>
+                        Access blocked.
+                    </h1>
 
                     <p>
                         Your admin account is currently suspended.
@@ -127,213 +162,509 @@ async function loadAdminPage() {
                     </button>
 
                 </div>
+
             </section>
+
         `;
 
+
         document
-            .getElementById("suspended-logout")
-            .addEventListener("click", async () => {
+            .getElementById(
+                "suspended-logout"
+            )
+            .addEventListener(
+                "click",
+                async () => {
 
-                await supabaseClient.auth.signOut();
+                    await supabaseClient
+                        .auth
+                        .signOut();
 
-                window.location.href =
-                    "login.html";
-            });
+                    window.location.href =
+                        "login.html";
+                }
+            );
 
         return;
     }
 
-    await loadUsers();
+
+    await loadDashboardData();
 }
 
-async function loadUsers() {
 
-    usersList.innerHTML =
-        "<p>Loading users...</p>";
+/* =========================================
+   LOAD DASHBOARD DATA
+========================================= */
 
-    const {
-        data,
-        error
-    } = await supabaseClient
-        .from("profiles")
-        .select(`
-            id,
-            username,
-            display_name,
-            is_admin,
-            is_suspended,
-            suspended_until,
-            created_at
-        `)
-        .order("created_at", {
-            ascending: false
-        });
+async function loadDashboardData() {
 
-    if (error) {
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .functions
+            .invoke(
+                "admin-dashboard"
+            );
+
+
+        if (error) {
+            throw error;
+        }
+
+
+        if (!data?.success) {
+
+            throw new Error(
+                data?.error ||
+                "Could not load admin dashboard."
+            );
+        }
+
+
+        /*
+         * Statistics.
+         */
+
+        renderStats(
+            data.stats
+        );
+
+
+        /*
+         * Users.
+         */
+
+        users =
+            data.users || [];
+
+        renderUsers(
+            users
+        );
+
+
+        /*
+         * Recent uploads.
+         */
+
+        renderRecentUploads(
+            data.recentUploads || []
+        );
+
+
+    } catch (error) {
 
         console.error(error);
 
-        usersList.innerHTML =
-            "<p>Could not load users.</p>";
+        showAdminMessage(
+            error.message ||
+            "Could not load admin dashboard."
+        );
+    }
+}
+
+
+/* =========================================
+   STATISTICS
+========================================= */
+
+function renderStats(stats) {
+
+    document.getElementById(
+        "stat-users"
+    ).textContent =
+        stats?.users ?? 0;
+
+
+    document.getElementById(
+        "stat-games"
+    ).textContent =
+        stats?.games ?? 0;
+
+
+    document.getElementById(
+        "stat-builds"
+    ).textContent =
+        stats?.builds ?? 0;
+
+
+    document.getElementById(
+        "stat-uploads"
+    ).textContent =
+        stats?.uploads_this_week ?? 0;
+
+
+    document.getElementById(
+        "stat-suspended"
+    ).textContent =
+        stats?.suspended_users ?? 0;
+}
+
+
+/* =========================================
+   RECENT UPLOADS
+========================================= */
+
+function renderRecentUploads(
+    uploads
+) {
+
+    if (!uploads.length) {
+
+        recentUploads.innerHTML = `
+
+            <div class="build-card">
+
+                <h2>
+                    No uploads yet
+                </h2>
+
+                <p>
+                    No builds have been uploaded this week.
+                </p>
+
+            </div>
+
+        `;
 
         return;
     }
 
-    users = data || [];
 
-    renderUsers(users);
+    recentUploads.innerHTML =
+        uploads.map(upload => {
+
+            const date =
+                upload.created_at
+                    ? new Date(
+                        upload.created_at
+                    ).toLocaleString()
+                    : "—";
+
+
+            return `
+
+                <article class="build-card">
+
+                    <span class="eyebrow">
+                        BUILD UPLOAD
+                    </span>
+
+                    <h2>
+                        ${escapeHTML(
+                            upload.game_name
+                        )}
+                    </h2>
+
+                    <p>
+                        ${escapeHTML(
+                            upload.version
+                        )}
+                    </p>
+
+
+                    <div class="game-card-info">
+
+                        <div>
+
+                            <span>
+                                USER
+                            </span>
+
+                            <strong>
+                                ${escapeHTML(
+                                    upload.display_name
+                                )}
+                            </strong>
+
+                        </div>
+
+
+                        <div>
+
+                            <span>
+                                UPLOADED
+                            </span>
+
+                            <strong>
+                                ${escapeHTML(
+                                    date
+                                )}
+                            </strong>
+
+                        </div>
+
+                    </div>
+
+                </article>
+
+            `;
+
+        }).join("");
 }
 
-function renderUsers(users) {
 
-    if (users.length === 0) {
+/* =========================================
+   USERS
+========================================= */
+
+function renderUsers(
+    users
+) {
+
+    if (!users.length) {
 
         usersList.innerHTML = `
+
             <div class="build-card">
 
-                <h2>No users</h2>
+                <h2>
+                    No users
+                </h2>
 
                 <p>
                     There are no users yet.
                 </p>
 
             </div>
+
         `;
 
         return;
     }
 
+
+    /*
+     * Admin first.
+     *
+     * Then alphabetical by name.
+     */
+
+    const sortedUsers =
+        [...users].sort(
+            (a, b) => {
+
+                const adminA =
+                    a.is_admin === true;
+
+                const adminB =
+                    b.is_admin === true;
+
+
+                if (
+                    adminA &&
+                    !adminB
+                ) {
+                    return -1;
+                }
+
+
+                if (
+                    !adminA &&
+                    adminB
+                ) {
+                    return 1;
+                }
+
+
+                const nameA =
+                    (
+                        a.display_name ||
+                        a.username ||
+                        ""
+                    ).toLowerCase();
+
+
+                const nameB =
+                    (
+                        b.display_name ||
+                        b.username ||
+                        ""
+                    ).toLowerCase();
+
+
+                return nameA.localeCompare(
+                    nameB
+                );
+            }
+        );
+
+
     usersList.innerHTML =
-        users.map(user => {
+        sortedUsers
+            .map(user => {
 
-            const status =
-                user.is_suspended
-                    ? "SUSPENDED"
-                    : "ACTIVE";
+                const status =
+                    user.is_suspended
+                        ? "SUSPENDED"
+                        : "ACTIVE";
 
-            const role =
-                user.is_admin
-                    ? "ADMIN"
-                    : "USER";
 
-            const created =
-                user.created_at
-                    ? new Date(
-                        user.created_at
-                    ).toLocaleDateString()
-                    : "—";
+                const role =
+                    user.is_admin
+                        ? "ADMIN"
+                        : "USER";
 
-            const isCurrentUser =
-                user.id === currentProfile.id;
 
-            return `
-                <article class="build-card">
+                const created =
+                    user.created_at
+                        ? new Date(
+                            user.created_at
+                        ).toLocaleDateString()
+                        : "—";
 
-                    <span class="eyebrow">
-                        ${role}
-                    </span>
 
-                    <h2>
-                        ${escapeHTML(
-                            user.display_name ||
-                            user.username
-                        )}
-                    </h2>
+                const isCurrentUser =
+                    user.id ===
+                    currentProfile.id;
 
-                    <p>
-                        @${escapeHTML(
-                            user.username
-                        )}
-                    </p>
 
-                    <div class="game-card-info">
+                return `
 
-                        <div>
-                            <span>STATUS</span>
+                    <article class="build-card">
 
-                            <strong>
-                                ${status}
-                            </strong>
+                        <span class="eyebrow">
+                            ${role}
+                        </span>
+
+
+                        <h2>
+                            ${escapeHTML(
+                                user.display_name ||
+                                user.username
+                            )}
+                        </h2>
+
+
+                        <p>
+                            @${escapeHTML(
+                                user.username
+                            )}
+                        </p>
+
+
+                        <div class="game-card-info">
+
+                            <div>
+
+                                <span>
+                                    STATUS
+                                </span>
+
+                                <strong>
+                                    ${status}
+                                </strong>
+
+                            </div>
+
+
+                            <div>
+
+                                <span>
+                                    CREATED
+                                </span>
+
+                                <strong>
+                                    ${created}
+                                </strong>
+
+                            </div>
+
                         </div>
 
-                        <div>
-                            <span>CREATED</span>
-
-                            <strong>
-                                ${created}
-                            </strong>
-                        </div>
-
-                    </div>
-
-                    ${
-                        user.suspended_until
-                            ? `
-                                <p style="margin-top:15px;">
-                                    Suspended until:
-                                    ${escapeHTML(
-                                        new Date(
-                                            user.suspended_until
-                                        ).toLocaleString()
-                                    )}
-                                </p>
-                            `
-                            : ""
-                    }
-
-                    <div
-                        style="
-                            display:flex;
-                            gap:10px;
-                            flex-wrap:wrap;
-                            margin-top:20px;
-                        "
-                    >
 
                         ${
-                            user.is_suspended
+                            user.suspended_until
                                 ? `
-                                    <button
-                                        class="btn primary"
-                                        onclick="reactivateUser('${user.id}')"
-                                    >
-                                        Reactivate
-                                    </button>
-                                `
-                                : user.is_admin
-                                    ? ""
-                                    : `
-                                        <button
-                                            class="btn"
-                                            onclick="suspendUser('${user.id}')"
-                                        >
-                                            Suspend
-                                        </button>
-                                    `
-                        }
 
-                        ${
-                            isCurrentUser
-                                ? `
-                                    <span
+                                    <p
                                         style="
-                                            align-self:center;
-                                            opacity:0.7;
+                                            margin-top:15px;
                                         "
                                     >
-                                        This is you
-                                    </span>
+                                        Suspended until:
+                                        ${escapeHTML(
+                                            new Date(
+                                                user.suspended_until
+                                            ).toLocaleString()
+                                        )}
+                                    </p>
+
                                 `
                                 : ""
                         }
 
-                    </div>
 
-                </article>
-            `;
+                        <div
+                            style="
+                                display:flex;
+                                gap:10px;
+                                flex-wrap:wrap;
+                                margin-top:20px;
+                            "
+                        >
 
-        }).join("");
+                            ${
+                                user.is_suspended
+                                    ? `
+
+                                        <button
+                                            class="btn primary"
+                                            onclick="reactivateUser('${user.id}')"
+                                        >
+                                            Reactivate
+                                        </button>
+
+                                    `
+                                    : user.is_admin
+                                        ? ""
+                                        : `
+
+                                            <button
+                                                class="btn"
+                                                onclick="suspendUser('${user.id}')"
+                                            >
+                                                Suspend
+                                            </button>
+
+                                        `
+                            }
+
+
+                            ${
+                                isCurrentUser
+                                    ? `
+
+                                        <span
+                                            style="
+                                                align-self:center;
+                                                opacity:0.7;
+                                            "
+                                        >
+                                            This is you
+                                        </span>
+
+                                    `
+                                    : ""
+                            }
+
+                        </div>
+
+                    </article>
+
+                `;
+
+            })
+            .join("");
 }
+
+
+/* =========================================
+   CREATE USER
+========================================= */
 
 createUserButton.addEventListener(
     "click",
@@ -342,11 +673,13 @@ createUserButton.addEventListener(
         createUserSection.style.display =
             "block";
 
+
         createUserSection.scrollIntoView({
             behavior: "smooth"
         });
     }
 );
+
 
 cancelCreateUser.addEventListener(
     "click",
@@ -354,12 +687,14 @@ cancelCreateUser.addEventListener(
 
         createUserForm.reset();
 
-        createUserMessage.innerHTML = "";
+        createUserMessage.innerHTML =
+            "";
 
         createUserSection.style.display =
             "none";
     }
 );
+
 
 createUserForm.addEventListener(
     "submit",
@@ -367,27 +702,42 @@ createUserForm.addEventListener(
 
         event.preventDefault();
 
-        createUserMessage.innerHTML = "";
+        createUserMessage.innerHTML =
+            "";
+
 
         const username =
             document
-                .getElementById("new-username")
+                .getElementById(
+                    "new-username"
+                )
                 .value
                 .trim()
                 .toLowerCase();
 
+
         const displayName =
             document
-                .getElementById("new-display-name")
+                .getElementById(
+                    "new-display-name"
+                )
                 .value
                 .trim();
 
+
         const password =
             document
-                .getElementById("new-password")
+                .getElementById(
+                    "new-password"
+                )
                 .value;
 
-        if (!/^[a-z0-9_]+$/.test(username)) {
+
+        if (
+            !/^[a-z0-9_]+$/.test(
+                username
+            )
+        ) {
 
             showCreateUserMessage(
                 "Username may only contain lowercase letters, numbers and underscores."
@@ -396,7 +746,10 @@ createUserForm.addEventListener(
             return;
         }
 
-        if (password.length < 8) {
+
+        if (
+            password.length < 8
+        ) {
 
             showCreateUserMessage(
                 "Password must be at least 8 characters."
@@ -405,9 +758,13 @@ createUserForm.addEventListener(
             return;
         }
 
-        submitCreateUser.disabled = true;
+
+        submitCreateUser.disabled =
+            true;
+
         submitCreateUser.textContent =
             "Creating...";
+
 
         try {
 
@@ -428,9 +785,11 @@ createUserForm.addEventListener(
                     }
                 );
 
+
             if (error) {
                 throw error;
             }
+
 
             if (!data?.success) {
 
@@ -440,37 +799,48 @@ createUserForm.addEventListener(
                 );
             }
 
+
             showCreateUserMessage(
                 "User created successfully.",
                 "success"
             );
 
+
             createUserForm.reset();
 
-            await loadUsers();
 
-            setTimeout(() => {
+            await loadDashboardData();
 
-                createUserSection.style.display =
-                    "none";
 
-                createUserMessage.innerHTML =
-                    "";
+            setTimeout(
+                () => {
 
-            }, 800);
+                    createUserSection.style.display =
+                        "none";
+
+                    createUserMessage.innerHTML =
+                        "";
+
+                },
+                800
+            );
+
 
         } catch (error) {
 
             console.error(error);
+
 
             showCreateUserMessage(
                 error.message ||
                 "Could not create user."
             );
 
+
         } finally {
 
-            submitCreateUser.disabled = false;
+            submitCreateUser.disabled =
+                false;
 
             submitCreateUser.textContent =
                 "Create user";
@@ -478,9 +848,19 @@ createUserForm.addEventListener(
     }
 );
 
-async function suspendUser(userId) {
 
-    if (userId === currentProfile.id) {
+/* =========================================
+   SUSPEND
+========================================= */
+
+async function suspendUser(
+    userId
+) {
+
+    if (
+        userId ===
+        currentProfile.id
+    ) {
 
         alert(
             "You cannot suspend your own account."
@@ -489,14 +869,17 @@ async function suspendUser(userId) {
         return;
     }
 
+
     const confirmed =
         confirm(
             "Are you sure you want to suspend this user?"
         );
 
+
     if (!confirmed) {
         return;
     }
+
 
     await manageUser(
         userId,
@@ -504,13 +887,25 @@ async function suspendUser(userId) {
     );
 }
 
-async function reactivateUser(userId) {
+
+/* =========================================
+   REACTIVATE
+========================================= */
+
+async function reactivateUser(
+    userId
+) {
 
     await manageUser(
         userId,
         "reactivate"
     );
 }
+
+
+/* =========================================
+   MANAGE USER
+========================================= */
 
 async function manageUser(
     userId,
@@ -534,9 +929,11 @@ async function manageUser(
                 }
             );
 
+
         if (error) {
             throw error;
         }
+
 
         if (!data?.success) {
 
@@ -546,6 +943,7 @@ async function manageUser(
             );
         }
 
+
         showAdminMessage(
             action === "suspend"
                 ? "User suspended."
@@ -553,11 +951,14 @@ async function manageUser(
             "success"
         );
 
-        await loadUsers();
+
+        await loadDashboardData();
+
 
     } catch (error) {
 
         console.error(error);
+
 
         showAdminMessage(
             error.message ||
@@ -566,64 +967,98 @@ async function manageUser(
     }
 }
 
+
+/* =========================================
+   MESSAGES
+========================================= */
+
 function showAdminMessage(
     message,
     type = "error"
 ) {
 
-    if (type === "success") {
+    if (
+        type === "success"
+    ) {
 
         adminMessage.innerHTML = `
+
             <p style="color:#00e5a0;">
                 ${escapeHTML(message)}
             </p>
+
         `;
 
         return;
     }
 
+
     adminMessage.innerHTML = `
+
         <p style="color:#ff6b81;">
             ${escapeHTML(message)}
         </p>
+
     `;
 }
+
 
 function showCreateUserMessage(
     message,
     type = "error"
 ) {
 
-    if (type === "success") {
+    if (
+        type === "success"
+    ) {
 
         createUserMessage.innerHTML = `
+
             <p style="color:#00e5a0;">
                 ${escapeHTML(message)}
             </p>
+
         `;
 
         return;
     }
 
+
     createUserMessage.innerHTML = `
+
         <p style="color:#ff6b81;">
             ${escapeHTML(message)}
         </p>
+
     `;
 }
+
+
+/* =========================================
+   LOGOUT
+========================================= */
 
 logoutButton.addEventListener(
     "click",
     async () => {
 
-        await supabaseClient.auth.signOut();
+        await supabaseClient
+            .auth
+            .signOut();
 
         window.location.href =
             "login.html";
     }
 );
 
-function escapeHTML(value) {
+
+/* =========================================
+   SECURITY
+========================================= */
+
+function escapeHTML(
+    value
+) {
 
     if (
         value === undefined ||
@@ -632,15 +1067,33 @@ function escapeHTML(value) {
         return "";
     }
 
+
     return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
+        .replaceAll(
+            "&",
+            "&amp;"
+        )
+        .replaceAll(
+            "<",
+            "&lt;"
+        )
+        .replaceAll(
+            ">",
+            "&gt;"
+        )
+        .replaceAll(
+            '"',
+            "&quot;"
+        )
         .replaceAll(
             "'",
             "&#039;"
         );
 }
+
+
+/* =========================================
+   START
+========================================= */
 
 loadAdminPage();

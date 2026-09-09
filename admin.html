@@ -1,53 +1,243 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Admin — Game Builds</title>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Admin Dashboard — Game Builds</title>
 
     <link rel="stylesheet" href="style.css">
+
 </head>
+
 
 <body>
 
+    <!-- Background -->
+    <div class="background-grid"></div>
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+
+    <!-- Navigation -->
     <header class="navbar">
+
         <div class="nav-container">
-            <a href="index.html" class="logo">GAME BUILDS</a>
+
+            <a
+                href="index.html"
+                class="logo"
+            >
+                GAME BUILDS
+            </a>
+
 
             <nav>
-                <a href="index.html">Home</a>
-                <a href="games.html">Games</a>
-                <a href="dashboard.html">Dashboard</a>
 
-                <button id="logout-button" class="nav-button">
+                <a href="index.html">
+                    Home
+                </a>
+
+                <a href="games.html">
+                    Games
+                </a>
+
+                <a href="dashboard.html">
+                    Dashboard
+                </a>
+
+                <a
+                    href="admin.html"
+                    class="admin-nav-link"
+                >
+                    Admin
+                </a>
+
+                <button
+                    id="logout-button"
+                    class="nav-button"
+                >
                     Log out
                 </button>
+
             </nav>
+
         </div>
+
     </header>
+
 
     <main>
 
+        <!-- Hero -->
         <section class="hero">
-            <div class="hero-content">
-                <span class="eyebrow">ADMINISTRATION</span>
 
-                <h1>User management.</h1>
+            <div class="hero-content">
+
+                <span class="eyebrow">
+                    ADMINISTRATION
+                </span>
+
+                <h1>
+                    Admin dashboard.
+                </h1>
 
                 <p>
-                    Manage Game Builds users and account status.
+                    Manage users, games and build activity.
                 </p>
+
             </div>
+
         </section>
 
+
+        <!-- Statistics -->
         <section class="build-section">
 
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">USERS</span>
-                    <h2>All users</h2>
+
+                    <span class="eyebrow">
+                        OVERVIEW
+                    </span>
+
+                    <h2>
+                        Statistics
+                    </h2>
+
                 </div>
+
+            </div>
+
+
+            <div class="admin-stats-grid">
+
+                <div class="admin-stat-card">
+
+                    <span>
+                        USERS
+                    </span>
+
+                    <strong id="stat-users">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-stat-card">
+
+                    <span>
+                        GAMES
+                    </span>
+
+                    <strong id="stat-games">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-stat-card">
+
+                    <span>
+                        BUILDS
+                    </span>
+
+                    <strong id="stat-builds">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-stat-card">
+
+                    <span>
+                        UPLOADS THIS WEEK
+                    </span>
+
+                    <strong id="stat-uploads">
+                        —
+                    </strong>
+
+                </div>
+
+
+                <div class="admin-stat-card">
+
+                    <span>
+                        SUSPENDED USERS
+                    </span>
+
+                    <strong id="stat-suspended">
+                        —
+                    </strong>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- Recent uploads -->
+        <section class="build-section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="eyebrow">
+                        ACTIVITY
+                    </span>
+
+                    <h2>
+                        Recent uploads
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <div
+                id="recent-uploads"
+                class="build-history"
+            >
+
+                <p>
+                    Loading recent uploads...
+                </p>
+
+            </div>
+
+        </section>
+
+
+        <!-- Users -->
+        <section class="build-section">
+
+            <div class="section-heading">
+
+                <div>
+
+                    <span class="eyebrow">
+                        USERS
+                    </span>
+
+                    <h2>
+                        User management
+                    </h2>
+
+                </div>
+
 
                 <button
                     id="create-user-button"
@@ -55,19 +245,31 @@
                 >
                     Create user
                 </button>
+
             </div>
+
 
             <div
                 id="admin-message"
                 style="margin-bottom:20px;"
             ></div>
 
-            <div id="users-list" class="build-history">
-                <p>Loading users...</p>
+
+            <div
+                id="users-list"
+                class="build-history"
+            >
+
+                <p>
+                    Loading users...
+                </p>
+
             </div>
 
         </section>
 
+
+        <!-- Create user -->
         <section
             id="create-user-section"
             class="build-section"
@@ -75,15 +277,26 @@
         >
 
             <div class="section-heading">
+
                 <div>
-                    <span class="eyebrow">NEW ACCOUNT</span>
-                    <h2>Create user</h2>
+
+                    <span class="eyebrow">
+                        NEW ACCOUNT
+                    </span>
+
+                    <h2>
+                        Create user
+                    </h2>
+
                 </div>
+
             </div>
+
 
             <div class="build-card">
 
                 <form id="create-user-form">
+
 
                     <div class="form-group">
 
@@ -101,6 +314,7 @@
 
                     </div>
 
+
                     <div class="form-group">
 
                         <label for="new-display-name">
@@ -116,6 +330,7 @@
                         >
 
                     </div>
+
 
                     <div class="form-group">
 
@@ -137,10 +352,12 @@
 
                     </div>
 
+
                     <div
                         id="create-user-message"
                         style="margin-bottom:20px;"
                     ></div>
+
 
                     <div
                         style="
@@ -157,6 +374,7 @@
                         >
                             Create user
                         </button>
+
 
                         <button
                             type="button"
@@ -176,12 +394,21 @@
 
     </main>
 
+
     <footer class="footer">
-        <p>Game Builds</p>
+
+        <p>
+            Game Builds
+        </p>
+
     </footer>
 
+
+    <!-- Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
     <script src="supabase.js"></script>
+
     <script src="admin.js"></script>
 
 </body>
