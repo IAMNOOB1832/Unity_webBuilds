@@ -1,470 +1,533 @@
 const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
+SUPABASE_URL,
+SUPABASE_KEY
 );
 
-
 const gameName =
-    document.getElementById("game-name");
+document.getElementById("game-name");
 
 const gameDescription =
-    document.getElementById("game-description");
+document.getElementById("game-description");
 
 const buildsList =
-    document.getElementById("builds-list");
+document.getElementById("builds-list");
 
 const logoutButton =
-    document.getElementById("logout-button");
+document.getElementById("logout-button");
 
 const showAddBuildButton =
-    document.getElementById("show-add-build-button");
+document.getElementById("show-add-build-button");
 
 const addBuildSection =
-    document.getElementById("add-build-section");
+document.getElementById("add-build-section");
 
 const cancelAddBuildButton =
-    document.getElementById("cancel-add-build-button");
+document.getElementById("cancel-add-build-button");
 
 const addBuildForm =
-    document.getElementById("add-build-form");
+document.getElementById("add-build-form");
 
 const addChangeButton =
-    document.getElementById("add-change-button");
+document.getElementById("add-change-button");
 
 const changelogList =
-    document.getElementById("changelog-list");
+document.getElementById("changelog-list");
 
 const formMessage =
-    document.getElementById("form-message");
+document.getElementById("form-message");
 
+const unityBuildInput =
+document.getElementById("unity-build");
+
+const selectedFilesText =
+document.getElementById("selected-files");
 
 const params =
-    new URLSearchParams(window.location.search);
+new URLSearchParams(window.location.search);
 
 const gameId =
-    params.get("id");
-
+params.get("id");
 
 let currentUser = null;
 let currentGame = null;
 
-
 /* =========================
-   LOAD PAGE
+LOAD PAGE
 ========================= */
 
 async function loadGame() {
 
-    if (!gameId) {
 
-        gameName.textContent =
-            "Game not found";
-
-        gameDescription.textContent =
-            "No game ID was provided.";
-
-        buildsList.innerHTML =
-            "<p>Invalid game.</p>";
-
-        return;
-    }
-
-
-    // Check login
-
-    const {
-        data: { user },
-        error: userError
-    } = await supabaseClient.auth.getUser();
-
-
-    if (userError || !user) {
-
-        window.location.href =
-            "login.html";
-
-        return;
-    }
-
-
-    currentUser = user;
-
-
-    // Load game
-
-    const {
-        data: game,
-        error: gameError
-    } = await supabaseClient
-        .from("games")
-        .select(`
-            id,
-            name,
-            slug,
-            description,
-            owner_id
-        `)
-        .eq("id", gameId)
-        .single();
-
-
-    if (gameError || !game) {
-
-        console.error(gameError);
-
-        gameName.textContent =
-            "Game not found";
-
-        gameDescription.textContent =
-            "";
-
-        buildsList.innerHTML =
-            "<p>Could not load this game.</p>";
-
-        return;
-    }
-
-
-    // Security check:
-    // only the owner can manage the game
-
-    if (game.owner_id !== currentUser.id) {
-
-        gameName.textContent =
-            "Access denied";
-
-        gameDescription.textContent =
-            "You do not own this game.";
-
-        buildsList.innerHTML =
-            "<p>You cannot manage this game.</p>";
-
-        showAddBuildButton.style.display =
-            "none";
-
-        return;
-    }
-
-
-    currentGame = game;
-
+if (!gameId) {
 
     gameName.textContent =
-        game.name;
+        "Game not found";
 
     gameDescription.textContent =
-        game.description ||
-        "No description.";
+        "No game ID was provided.";
 
+    buildsList.innerHTML =
+        "<p>Invalid game.</p>";
 
-    await loadBuilds();
-
-
-    // Automatically open Add Build
-    // when ?action=add-build is present
-
-    if (params.get("action") === "add-build") {
-
-        showAddBuildForm();
-
-    }
+    return;
 }
 
 
+// Check login
+
+const {
+    data: { user },
+    error: userError
+} = await supabaseClient.auth.getUser();
+
+
+if (userError || !user) {
+
+    window.location.href =
+        "login.html";
+
+    return;
+}
+
+
+currentUser = user;
+
+
+// Load game
+
+const {
+    data: game,
+    error: gameError
+} = await supabaseClient
+    .from("games")
+    .select(`
+        id,
+        name,
+        slug,
+        description,
+        owner_id
+    `)
+    .eq("id", gameId)
+    .single();
+
+
+if (gameError || !game) {
+
+    console.error(gameError);
+
+    gameName.textContent =
+        "Game not found";
+
+    gameDescription.textContent =
+        "";
+
+    buildsList.innerHTML =
+        "<p>Could not load this game.</p>";
+
+    return;
+}
+
+
+// Security check:
+// only the owner can manage the game
+
+if (game.owner_id !== currentUser.id) {
+
+    gameName.textContent =
+        "Access denied";
+
+    gameDescription.textContent =
+        "You do not own this game.";
+
+    buildsList.innerHTML =
+        "<p>You cannot manage this game.</p>";
+
+    showAddBuildButton.style.display =
+        "none";
+
+    return;
+}
+
+
+currentGame = game;
+
+
+gameName.textContent =
+    game.name;
+
+gameDescription.textContent =
+    game.description ||
+    "No description.";
+
+
+await loadBuilds();
+
+
+// Automatically open Add Build
+// when ?action=add-build is present
+
+if (params.get("action") === "add-build") {
+
+    showAddBuildForm();
+
+}
+
+
+}
+
 /* =========================
-   LOAD BUILDS
+LOAD BUILDS
 ========================= */
 
 async function loadBuilds() {
 
-    const {
-        data: builds,
-        error: buildsError
-    } = await supabaseClient
-        .from("builds")
-        .select(`
+
+const {
+    data: builds,
+    error: buildsError
+} = await supabaseClient
+    .from("builds")
+    .select(`
+        id,
+        version,
+        build_date,
+        status,
+        description,
+        url,
+        created_at,
+        build_changelog (
             id,
-            version,
-            build_date,
-            status,
-            description,
-            url,
-            created_at,
-            build_changelog (
-                id,
-                change_text,
-                created_at
-            )
-        `)
-        .eq("game_id", gameId)
-        .order("build_date", {
-            ascending: false
-        });
+            change_text,
+            created_at
+        )
+    `)
+    .eq("game_id", gameId)
+    .order("build_date", {
+        ascending: false
+    });
 
 
-    if (buildsError) {
+if (buildsError) {
 
-        console.error(buildsError);
+    console.error(buildsError);
 
-        buildsList.innerHTML =
-            "<p>Could not load builds.</p>";
+    buildsList.innerHTML =
+        "<p>Could not load builds.</p>";
 
-        return;
-    }
-
-
-    if (!builds || builds.length === 0) {
-
-        buildsList.innerHTML = `
-            <div class="build-card">
-
-                <h2>
-                    No builds yet
-                </h2>
-
-                <p>
-                    This game doesn't have any builds yet.
-                </p>
-
-            </div>
-        `;
-
-        return;
-    }
-
-
-    renderBuilds(builds);
+    return;
 }
 
 
+if (!builds || builds.length === 0) {
+
+    buildsList.innerHTML = `
+        <div class="build-card">
+
+            <h2>
+                No builds yet
+            </h2>
+
+            <p>
+                This game doesn't have any builds yet.
+            </p>
+
+        </div>
+    `;
+
+    return;
+}
+
+
+renderBuilds(builds);
+
+
+}
+
 /* =========================
-   RENDER BUILDS
+RENDER BUILDS
 ========================= */
 
 function renderBuilds(builds) {
 
-    buildsList.innerHTML =
-        builds.map(build => {
 
-            const changelog =
-                Array.isArray(build.build_changelog)
-                    ? build.build_changelog
-                    : [];
+buildsList.innerHTML =
+    builds.map(build => {
 
-
-            const changelogHTML =
-                changelog.length > 0
-                    ? `
-                        <ul>
-                            ${changelog.map(change => `
-                                <li>
-                                    ${escapeHTML(
-                                        change.change_text
-                                    )}
-                                </li>
-                            `).join("")}
-                        </ul>
-                    `
-                    : `
-                        <p>
-                            No changelog entries.
-                        </p>
-                    `;
+        const changelog =
+            Array.isArray(build.build_changelog)
+                ? build.build_changelog
+                : [];
 
 
-            return `
-                <article class="build-card">
+        const changelogHTML =
+            changelog.length > 0
+                ? `
+                    <ul>
+                        ${changelog.map(change => `
+                            <li>
+                                ${escapeHTML(
+                                    change.change_text
+                                )}
+                            </li>
+                        `).join("")}
+                    </ul>
+                `
+                : `
+                    <p>
+                        No changelog entries.
+                    </p>
+                `;
+
+
+        return `
+            <article class="build-card">
+
+                <span class="eyebrow">
+                    BUILD
+                </span>
+
+                <h2>
+                    ${escapeHTML(build.version)}
+                </h2>
+
+                <p>
+                    <strong>
+                        ${escapeHTML(build.status)}
+                    </strong>
+                </p>
+
+                <p>
+                    ${formatDate(build.build_date)}
+                </p>
+
+                <p>
+                    ${escapeHTML(
+                        build.description || ""
+                    )}
+                </p>
+
+
+                <div style="
+                    margin-top:20px;
+                ">
 
                     <span class="eyebrow">
-                        BUILD
+                        WHAT'S NEW
                     </span>
 
-                    <h2>
-                        ${escapeHTML(build.version)}
-                    </h2>
+                    ${changelogHTML}
 
-                    <p>
-                        <strong>
-                            ${escapeHTML(build.status)}
-                        </strong>
-                    </p>
-
-                    <p>
-                        ${formatDate(build.build_date)}
-                    </p>
-
-                    <p>
-                        ${escapeHTML(
-                            build.description || ""
-                        )}
-                    </p>
+                </div>
 
 
-                    <div style="
-                        margin-top:20px;
-                    ">
+                <div style="
+                    display:flex;
+                    gap:10px;
+                    flex-wrap:wrap;
+                    margin-top:20px;
+                ">
 
-                        <span class="eyebrow">
-                            WHAT'S NEW
-                        </span>
+                    <a
+                        href="${escapeAttribute(build.url)}"
+                        class="btn primary"
+                        target="_blank"
+                        rel="noopener"
+                    >
+                        Play build
+                    </a>
 
-                        ${changelogHTML}
+                    <button
+                        type="button"
+                        class="btn delete-build-button"
+                        data-build-id="${escapeAttribute(build.id)}"
+                    >
+                        Delete
+                    </button>
 
-                    </div>
+                </div>
 
+            </article>
+        `;
 
-                    <div style="
-                        display:flex;
-                        gap:10px;
-                        flex-wrap:wrap;
-                        margin-top:20px;
-                    ">
-
-                        <a
-                            href="${escapeAttribute(build.url)}"
-                            class="btn primary"
-                            target="_blank"
-                            rel="noopener"
-                        >
-                            Play build
-                        </a>
-
-                        <button
-                            type="button"
-                            class="btn delete-build-button"
-                            data-build-id="${escapeAttribute(build.id)}"
-                        >
-                            Delete
-                        </button>
-
-                    </div>
-
-                </article>
-            `;
-
-        }).join("");
+    }).join("");
 
 
-    // Delete buttons
+// Delete buttons
 
-    document
-        .querySelectorAll(".delete-build-button")
-        .forEach(button => {
+document
+    .querySelectorAll(".delete-build-button")
+    .forEach(button => {
 
-            button.addEventListener(
-                "click",
-                () => deleteBuild(
-                    button.dataset.buildId
-                )
-            );
+        button.addEventListener(
+            "click",
+            () => deleteBuild(
+                button.dataset.buildId
+            )
+        );
 
-        });
+    });
+
+
 }
 
-
 /* =========================
-   ADD BUILD FORM
+ADD BUILD FORM
 ========================= */
 
 function showAddBuildForm() {
 
-    addBuildSection.style.display =
-        "block";
 
-    addBuildSection.scrollIntoView({
-        behavior: "smooth"
-    });
+addBuildSection.style.display =
+    "block";
+
+addBuildSection.scrollIntoView({
+    behavior: "smooth"
+});
+
+
 }
-
 
 function hideAddBuildForm() {
 
-    addBuildSection.style.display =
-        "none";
 
-    formMessage.textContent = "";
+addBuildSection.style.display =
+    "none";
+
+formMessage.textContent = "";
+
+
 }
 
-
 showAddBuildButton.addEventListener(
-    "click",
-    showAddBuildForm
+"click",
+showAddBuildForm
 );
-
 
 cancelAddBuildButton.addEventListener(
-    "click",
-    hideAddBuildForm
+"click",
+hideAddBuildForm
 );
 
+/* =========================
+UNITY FILE SELECTION
+========================= */
+
+unityBuildInput.addEventListener(
+"change",
+() => {
+
+
+    const files =
+        Array.from(unityBuildInput.files || []);
+
+
+    if (files.length === 0) {
+
+        selectedFilesText.textContent =
+            "No files selected.";
+
+        return;
+    }
+
+
+    const hasIndex =
+        files.some(file => {
+
+            const relativePath =
+                file.webkitRelativePath ||
+                file.name;
+
+            return relativePath
+                .split("/")
+                .pop()
+                .toLowerCase() === "index.html";
+        });
+
+
+    selectedFilesText.textContent =
+        `${files.length} file(s) selected.` +
+        (
+            hasIndex
+                ? " Unity index.html found."
+                : " WARNING: index.html was not found."
+        );
+}
+ 
+
+);
 
 /* =========================
-   CHANGELOG
+CHANGELOG
 ========================= */
 
 addChangeButton.addEventListener(
-    "click",
-    () => {
+"click",
+() => {
 
-        const row =
-            document.createElement("div");
+ 
+    const row =
+        document.createElement("div");
 
-        row.className =
-            "change-row";
+    row.className =
+        "change-row";
 
-        row.style.marginTop =
-            "10px";
+    row.style.marginTop =
+        "10px";
 
-        row.innerHTML = `
+    row.innerHTML = `
 
-            <input
-                type="text"
-                class="change-input"
-                placeholder="What changed?"
-                required
-            >
+        <input
+            type="text"
+            class="change-input"
+            placeholder="What changed?"
+            required
+        >
 
-            <button
-                type="button"
-                class="btn remove-change-button"
-            >
-                Remove
-            </button>
+        <button
+            type="button"
+            class="btn remove-change-button"
+        >
+            Remove
+        </button>
 
-        `;
-
-
-        changelogList.appendChild(row);
+    `;
 
 
-        row.querySelector(
-            ".remove-change-button"
-        ).addEventListener(
-            "click",
-            () => row.remove()
-        );
-    }
+    changelogList.appendChild(row);
+
+
+    row.querySelector(
+        ".remove-change-button"
+    ).addEventListener(
+        "click",
+        () => row.remove()
+    );
+}
+ 
+
 );
 
-
 /* =========================
-   ADD BUILD
+ADD BUILD
 ========================= */
 
 addBuildForm.addEventListener(
-    "submit",
-    async event => {
+"submit",
+async event => {
 
-        event.preventDefault();
+ 
+    event.preventDefault();
 
 
-        if (!currentGame || !currentUser) {
-            return;
-        }
+    if (!currentGame || !currentUser) {
+        return;
+    }
 
+
+    try {
 
         formMessage.textContent =
-            "Adding build...";
+            "Preparing build...";
 
 
         const version =
@@ -493,13 +556,6 @@ addBuildForm.addEventListener(
                 .trim();
 
 
-        const buildUrl =
-            document
-                .getElementById("build-url")
-                .value
-                .trim();
-
-
         const changes =
             [
                 ...document.querySelectorAll(
@@ -510,11 +566,21 @@ addBuildForm.addEventListener(
             .filter(Boolean);
 
 
-        if (!version ||
+        const files =
+            Array.from(
+                unityBuildInput.files || []
+            );
+
+
+        /* =========================
+           VALIDATION
+        ========================= */
+
+        if (
+            !version ||
             !buildDate ||
             !status ||
-            !description ||
-            !buildUrl
+            !description
         ) {
 
             formMessage.textContent =
@@ -524,7 +590,180 @@ addBuildForm.addEventListener(
         }
 
 
-        // Create build
+        if (files.length === 0) {
+
+            formMessage.textContent =
+                "Please select your Unity WebGL build folder.";
+
+            return;
+        }
+
+
+        const indexFile =
+            files.find(file => {
+
+                const relativePath =
+                    file.webkitRelativePath ||
+                    file.name;
+
+                return relativePath
+                    .split("/")
+                    .pop()
+                    .toLowerCase() === "index.html";
+            });
+
+
+        if (!indexFile) {
+
+            formMessage.textContent =
+                "The selected folder does not contain index.html.";
+
+            return;
+        }
+
+
+        formMessage.textContent =
+            `Reading ${files.length} file(s)...`;
+
+
+        /* =========================
+           CONVERT FILES TO BASE64
+        ========================= */
+
+        const encodedFiles =
+            [];
+
+
+        for (
+            let i = 0;
+            i < files.length;
+            i++
+        ) {
+
+            const file =
+                files[i];
+
+
+            let relativePath =
+                file.webkitRelativePath ||
+                file.name;
+
+
+            /*
+             * webkitRelativePath normally looks like:
+             *
+             * MyBuild/index.html
+             * MyBuild/Build/game.wasm
+             *
+             * We don't want the selected
+             * folder name in GitHub.
+             *
+             * Remove the first folder.
+             */
+
+            const pathParts =
+                relativePath
+                    .split("/")
+                    .filter(Boolean);
+
+
+            if (pathParts.length > 1) {
+
+                pathParts.shift();
+
+            }
+
+
+            relativePath =
+                pathParts.join("/");
+
+
+            const arrayBuffer =
+                await file.arrayBuffer();
+
+
+            const base64 =
+                arrayBufferToBase64(
+                    arrayBuffer
+                );
+
+
+            encodedFiles.push({
+                path: relativePath,
+                content: base64
+            });
+
+
+            formMessage.textContent =
+                `Reading files... ${i + 1}/${files.length}`;
+        }
+
+
+        /* =========================
+           UPLOAD TO GITHUB
+        ========================= */
+
+        formMessage.textContent =
+            "Uploading build to GitHub...";
+
+
+        const {
+            data: uploadData,
+            error: uploadError
+        } = await supabaseClient.functions.invoke(
+            "github-upload-build",
+            {
+                body: {
+                    gameId: currentGame.id,
+                    version: version,
+                    files: encodedFiles
+                }
+            }
+        );
+
+
+        if (uploadError) {
+
+            console.error(uploadError);
+
+            throw new Error(
+                uploadError.message ||
+                "Could not upload build to GitHub."
+            );
+        }
+
+
+        if (
+            !uploadData ||
+            !uploadData.success
+        ) {
+
+            throw new Error(
+                uploadData?.message ||
+                "GitHub upload failed."
+            );
+        }
+
+
+        /* =========================
+           SAVE BUILD METADATA
+        ========================= */
+
+        formMessage.textContent =
+            "GitHub upload successful. Saving build...";
+
+
+        const buildUrl =
+            uploadData.url;
+
+
+        if (!buildUrl) {
+
+            throw new Error(
+                "GitHub upload succeeded, but no build URL was returned."
+            );
+        }
+
 
         const {
             data: build,
@@ -547,15 +786,15 @@ addBuildForm.addEventListener(
 
             console.error(buildError);
 
-            formMessage.textContent =
-                buildError.message ||
-                "Could not create build.";
-
-            return;
+            throw new Error(
+                "Build was uploaded to GitHub, but could not be saved in Supabase."
+            );
         }
 
 
-        // Add changelog entries
+        /* =========================
+           SAVE CHANGELOG
+        ========================= */
 
         if (changes.length > 0) {
 
@@ -580,7 +819,7 @@ addBuildForm.addEventListener(
                 );
 
                 formMessage.textContent =
-                    "Build created, but changelog could not be saved.";
+                    "Build uploaded and saved, but changelog could not be saved.";
 
                 await loadBuilds();
 
@@ -589,202 +828,289 @@ addBuildForm.addEventListener(
         }
 
 
-        // Success
+        /* =========================
+           SUCCESS
+        ========================= */
 
         formMessage.textContent =
-            "Build successfully added!";
+            "Build successfully uploaded!";
 
 
         addBuildForm.reset();
 
 
-        // Leave one changelog row
-
-        changelogList.innerHTML = `
-
-            <div class="change-row">
-
-                <input
-                    type="text"
-                    class="change-input"
-                    placeholder="What changed?"
-                    required
-                >
-
-                <button
-                    type="button"
-                    class="btn remove-change-button"
-                >
-                    Remove
-                </button>
-
-            </div>
-
-        `;
+        selectedFilesText.textContent =
+            "No files selected.";
 
 
-        changelogList
-            .querySelector(
-                ".remove-change-button"
-            )
-            .addEventListener(
-                "click",
-                event => {
-                    event.target
-                        .closest(".change-row")
-                        .remove();
-                }
-            );
+        resetChangelog();
 
 
         await loadBuilds();
 
     }
+
+    catch (error) {
+
+        console.error(error);
+
+        formMessage.textContent =
+            error.message ||
+            "Something went wrong while uploading the build.";
+    }
+
+}
+ 
+
 );
 
+/* =========================
+RESET CHANGELOG
+========================= */
+
+function resetChangelog() {
+
+ 
+changelogList.innerHTML = `
+
+    <div class="change-row">
+
+        <input
+            type="text"
+            class="change-input"
+            placeholder="What changed?"
+            required
+        >
+
+        <button
+            type="button"
+            class="btn remove-change-button"
+        >
+            Remove
+        </button>
+
+    </div>
+
+`;
+
+
+changelogList
+    .querySelector(
+        ".remove-change-button"
+    )
+    .addEventListener(
+        "click",
+        event => {
+
+            event.target
+                .closest(".change-row")
+                .remove();
+
+        }
+    );
+ 
+
+}
 
 /* =========================
-   DELETE BUILD
+DELETE BUILD
 ========================= */
 
 async function deleteBuild(buildId) {
 
-    const confirmed =
-        window.confirm(
-            "Are you sure you want to delete this build?"
-        );
+ 
+const confirmed =
+    window.confirm(
+        "Are you sure you want to delete this build?"
+    );
 
 
-    if (!confirmed) {
-        return;
-    }
-
-
-    // Delete changelog first
-
-    const {
-        error: changelogError
-    } = await supabaseClient
-        .from("build_changelog")
-        .delete()
-        .eq("build_id", buildId);
-
-
-    if (changelogError) {
-
-        console.error(
-            changelogError
-        );
-
-        alert(
-            "Could not delete the build changelog."
-        );
-
-        return;
-    }
-
-
-    // Delete build
-
-    const {
-        error: buildError
-    } = await supabaseClient
-        .from("builds")
-        .delete()
-        .eq("id", buildId);
-
-
-    if (buildError) {
-
-        console.error(buildError);
-
-        alert(
-            "Could not delete the build."
-        );
-
-        return;
-    }
-
-
-    await loadBuilds();
+if (!confirmed) {
+    return;
 }
 
 
+// Delete changelog first
+
+const {
+    error: changelogError
+} = await supabaseClient
+    .from("build_changelog")
+    .delete()
+    .eq("build_id", buildId);
+
+
+if (changelogError) {
+
+    console.error(
+        changelogError
+    );
+
+    alert(
+        "Could not delete the build changelog."
+    );
+
+    return;
+}
+
+
+// Delete build
+
+const {
+    error: buildError
+} = await supabaseClient
+    .from("builds")
+    .delete()
+    .eq("id", buildId);
+
+
+if (buildError) {
+
+    console.error(buildError);
+
+    alert(
+        "Could not delete the build."
+    );
+
+    return;
+}
+
+
+await loadBuilds();
+ 
+
+}
+
 /* =========================
-   LOG OUT
+LOG OUT
 ========================= */
 
 logoutButton.addEventListener(
-    "click",
-    async () => {
+"click",
+async () => {
 
-        await supabaseClient.auth.signOut();
+ 
+    await supabaseClient.auth.signOut();
 
-        window.location.href =
-            "login.html";
-    }
+    window.location.href =
+        "login.html";
+}
+ 
+
 );
 
-
 /* =========================
-   HELPERS
+HELPERS
 ========================= */
 
 function formatDate(date) {
 
-    if (!date) {
-        return "—";
-    }
-
-
-    return new Date(date)
-        .toLocaleDateString(
-            "en-GB",
-            {
-                day: "2-digit",
-                month: "2-digit",
-                year: "numeric"
-            }
-        );
+ 
+if (!date) {
+    return "—";
 }
 
+
+return new Date(date)
+    .toLocaleDateString(
+        "en-GB",
+        {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric"
+        }
+    );
+ 
+
+}
 
 function escapeHTML(value) {
 
-    if (
-        value === undefined ||
-        value === null
-    ) {
-        return "";
-    }
-
-
-    return String(value)
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+ 
+if (
+    value === undefined ||
+    value === null
+) {
+    return "";
 }
 
+
+return String(value)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+ 
+
+}
 
 function escapeAttribute(value) {
 
-    if (
-        value === undefined ||
-        value === null
-    ) {
-        return "#";
-    }
-
-
-    return String(value)
-        .replaceAll("&", "%26")
-        .replaceAll('"', "%22")
-        .replaceAll("<", "%3C")
-        .replaceAll(">", "%3E")
-        .replaceAll(" ", "%20");
+ 
+if (
+    value === undefined ||
+    value === null
+) {
+    return "#";
 }
 
+
+return String(value)
+    .replaceAll("&", "%26")
+    .replaceAll('"', "%22")
+    .replaceAll("<", "%3C")
+    .replaceAll(">", "%3E")
+    .replaceAll(" ", "%20");
+ 
+
+}
+
+/* =========================
+ARRAY BUFFER → BASE64
+========================= */
+
+function arrayBufferToBase64(buffer) {
+
+ 
+const bytes =
+    new Uint8Array(buffer);
+
+const chunkSize =
+    0x8000;
+
+let binary = "";
+
+
+for (
+    let i = 0;
+    i < bytes.length;
+    i += chunkSize
+) {
+
+    const chunk =
+        bytes.subarray(
+            i,
+            Math.min(
+                i + chunkSize,
+                bytes.length
+            )
+        );
+
+
+    binary += String.fromCharCode(
+        ...chunk
+    );
+}
+
+
+return btoa(binary);
+ 
+
+}
+
+/* =========================
+START
+========================= */
 
 loadGame();
