@@ -3,10 +3,10 @@
         "version": "v0.1",
         "date": "2026-08-01",
         "status": "PROTOTYPE",
-        "description": "unfinished version there is a lot missing.",
-        "url": "builds/v0.1/",
+        "description": "unfinished version of Pancakeria, there is a lot missing.",
+        "url": "Builds/v0.1/",
         "changelog": [
-            "change scene",
+            "change scenery",
             "move pancakes",
             "get receipt"
         ]
