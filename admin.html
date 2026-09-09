@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin — Game Builds</title>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <header class="navbar">
+        <div class="nav-container">
+            <a href="index.html" class="logo">GAME BUILDS</a>
+
+            <nav>
+                <a href="index.html">Home</a>
+                <a href="games.html">Games</a>
+                <a href="dashboard.html">Dashboard</a>
+
+                <button id="logout-button" class="nav-button">
+                    Log out
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+
+        <section class="hero">
+            <div class="hero-content">
+                <span class="eyebrow">ADMINISTRATION</span>
+
+                <h1>User management.</h1>
+
+                <p>
+                    Manage Game Builds users and account status.
+                </p>
+            </div>
+        </section>
+
+        <section class="build-section">
+
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">USERS</span>
+                    <h2>All users</h2>
+                </div>
+
+                <button
+                    id="create-user-button"
+                    class="btn primary"
+                >
+                    Create user
+                </button>
+            </div>
+
+            <div
+                id="admin-message"
+                style="margin-bottom:20px;"
+            ></div>
+
+            <div id="users-list" class="build-history">
+                <p>Loading users...</p>
+            </div>
+
+        </section>
+
+        <section
+            id="create-user-section"
+            class="build-section"
+            style="display:none;"
+        >
+
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">NEW ACCOUNT</span>
+                    <h2>Create user</h2>
+                </div>
+            </div>
+
+            <div class="build-card">
+
+                <form id="create-user-form">
+
+                    <div class="form-group">
+
+                        <label for="new-username">
+                            Username
+                        </label>
+
+                        <input
+                            type="text"
+                            id="new-username"
+                            maxlength="50"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="new-display-name">
+                            Display name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="new-display-name"
+                            maxlength="100"
+                            autocomplete="off"
+                            required
+                        >
+
+                    </div>
+
+                    <div class="form-group">
+
+                        <label for="new-password">
+                            Password
+                        </label>
+
+                        <input
+                            type="password"
+                            id="new-password"
+                            minlength="8"
+                            autocomplete="new-password"
+                            required
+                        >
+
+                        <p class="form-help">
+                            Minimum 8 characters.
+                        </p>
+
+                    </div>
+
+                    <div
+                        id="create-user-message"
+                        style="margin-bottom:20px;"
+                    ></div>
+
+                    <div
+                        style="
+                            display:flex;
+                            gap:10px;
+                            flex-wrap:wrap;
+                        "
+                    >
+
+                        <button
+                            type="submit"
+                            id="submit-create-user"
+                            class="btn primary"
+                        >
+                            Create user
+                        </button>
+
+                        <button
+                            type="button"
+                            id="cancel-create-user"
+                            class="btn"
+                        >
+                            Cancel
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </section>
+
+    </main>
+
+    <footer class="footer">
+        <p>Game Builds</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="supabase.js"></script>
+    <script src="admin.js"></script>
+
+</body>
+</html>
