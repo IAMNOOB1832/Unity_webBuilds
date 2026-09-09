@@ -1,300 +1,329 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Manage Game — Game Builds</title>
 
-    <link rel="stylesheet" href="style.css">
+<title>Manage Game — Game Builds</title>
+
+<link rel="stylesheet" href="style.css">
+
+
 </head>
 
 <body>
 
-    <header class="navbar">
-        <div class="nav-container">
+<header class="navbar">
+    <div class="nav-container">
 
-            <a href="index.html" class="logo">
-                GAME BUILDS
+        <a href="index.html" class="logo">
+            GAME BUILDS
+        </a>
+
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="games.html">Games</a>
+            <a href="dashboard.html">Dashboard</a>
+
+            <button id="logout-button" class="nav-button">
+                Log out
+            </button>
+        </nav>
+
+    </div>
+</header>
+
+<main>
+
+    <section class="hero">
+
+        <div class="hero-content">
+
+            <a href="dashboard.html" class="eyebrow">
+                ← BACK TO DASHBOARD
             </a>
 
-            <nav>
-                <a href="index.html">Home</a>
-                <a href="games.html">Games</a>
-                <a href="dashboard.html">Dashboard</a>
+            <span class="eyebrow">
+                MANAGE GAME
+            </span>
 
-                <button id="logout-button" class="nav-button">
-                    Log out
-                </button>
-            </nav>
+            <h1 id="game-name">
+                Loading...
+            </h1>
+
+            <p id="game-description">
+                Loading game...
+            </p>
 
         </div>
-    </header>
 
-    <main>
+    </section>
 
-        <section class="hero">
 
-            <div class="hero-content">
+    <!-- BUILDS -->
 
-                <a href="dashboard.html" class="eyebrow">
-                    ← BACK TO DASHBOARD
-                </a>
+    <section class="build-section">
 
+        <div class="section-heading">
+
+            <div>
                 <span class="eyebrow">
-                    MANAGE GAME
+                    YOUR BUILDS
                 </span>
 
-                <h1 id="game-name">
-                    Loading...
-                </h1>
-
-                <p id="game-description">
-                    Loading game...
-                </p>
-
+                <h2>
+                    Build history
+                </h2>
             </div>
 
-        </section>
+            <button
+                id="show-add-build-button"
+                class="btn primary"
+            >
+                + Add build
+            </button>
+
+        </div>
 
 
-        <!-- BUILDS -->
+        <div id="builds-list" class="build-history">
 
-        <section class="build-section">
+            <p>
+                Loading builds...
+            </p>
 
-            <div class="section-heading">
+        </div>
 
-                <div>
-                    <span class="eyebrow">
-                        YOUR BUILDS
-                    </span>
+    </section>
 
-                    <h2>
-                        Build history
-                    </h2>
-                </div>
 
-                <button
-                    id="show-add-build-button"
-                    class="btn primary"
+    <!-- ADD BUILD -->
+
+    <section
+        id="add-build-section"
+        class="build-section"
+        style="display:none;"
+    >
+
+        <div class="section-heading">
+
+            <div>
+                <span class="eyebrow">
+                    NEW BUILD
+                </span>
+
+                <h2>
+                    Add build
+                </h2>
+            </div>
+
+        </div>
+
+
+        <form id="add-build-form">
+
+            <div class="build-card">
+
+                <label for="version">
+                    Version
+                </label>
+
+                <input
+                    id="version"
+                    name="version"
+                    type="text"
+                    placeholder="v0.2"
+                    required
                 >
-                    + Add build
-                </button>
-
-            </div>
 
 
-            <div id="builds-list" class="build-history">
+                <label for="build-date">
+                    Build date
+                </label>
 
-                <p>
-                    Loading builds...
-                </p>
+                <input
+                    id="build-date"
+                    name="build-date"
+                    type="date"
+                    required
+                >
 
-            </div>
 
-        </section>
+                <label for="status">
+                    Status
+                </label>
+
+                <select
+                    id="status"
+                    name="status"
+                    required
+                >
+                    <option value="PROTOTYPE">
+                        PROTOTYPE
+                    </option>
+
+                    <option value="ALPHA">
+                        ALPHA
+                    </option>
+
+                    <option value="BETA">
+                        BETA
+                    </option>
+
+                    <option value="RELEASE">
+                        RELEASE
+                    </option>
+                </select>
 
 
-        <!-- ADD BUILD -->
+                <label for="description">
+                    Description
+                </label>
 
-        <section
-            id="add-build-section"
-            class="build-section"
-            style="display:none;"
-        >
+                <textarea
+                    id="description"
+                    name="description"
+                    rows="5"
+                    placeholder="Describe this build..."
+                    required
+                ></textarea>
 
-            <div class="section-heading">
 
-                <div>
+                <!-- UNITY BUILD -->
+
+                <div style="margin-top:30px;">
+
                     <span class="eyebrow">
-                        NEW BUILD
+                        UNITY WEBGL
                     </span>
 
                     <h2>
-                        Add build
+                        Upload build
                     </h2>
+
+                    <p>
+                        Select the complete Unity WebGL build folder.
+                    </p>
+
+                    <input
+                        id="unity-build"
+                        type="file"
+                        webkitdirectory
+                        directory
+                        multiple
+                        required
+                    >
+
+                    <p
+                        id="selected-files"
+                        style="margin-top:10px;"
+                    >
+                        No files selected.
+                    </p>
+
+                </div>
+
+
+                <!-- CHANGELOG -->
+
+                <div class="section-heading" style="margin-top:30px;">
+
+                    <div>
+                        <span class="eyebrow">
+                            CHANGELOG
+                        </span>
+
+                        <h2>
+                            What's new?
+                        </h2>
+                    </div>
+
+                    <button
+                        type="button"
+                        id="add-change-button"
+                        class="btn"
+                    >
+                        + Add change
+                    </button>
+
+                </div>
+
+
+                <div id="changelog-list">
+
+                    <div class="change-row">
+
+                        <input
+                            type="text"
+                            class="change-input"
+                            placeholder="What changed?"
+                            required
+                        >
+
+                        <button
+                            type="button"
+                            class="btn remove-change-button"
+                        >
+                            Remove
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="form-message"
+                    style="margin-top:20px;"
+                ></div>
+
+
+                <div style="
+                    display:flex;
+                    gap:10px;
+                    flex-wrap:wrap;
+                    margin-top:25px;
+                ">
+
+                    <button
+                        type="submit"
+                        class="btn primary"
+                    >
+                        Upload build
+                    </button>
+
+                    <button
+                        type="button"
+                        id="cancel-add-build-button"
+                        class="btn"
+                    >
+                        Cancel
+                    </button>
+
                 </div>
 
             </div>
 
+        </form>
 
-            <form id="add-build-form">
+    </section>
 
-                <div class="build-card">
-
-                    <label for="version">
-                        Version
-                    </label>
-
-                    <input
-                        id="version"
-                        name="version"
-                        type="text"
-                        placeholder="v0.2"
-                        required
-                    >
+</main>
 
 
-                    <label for="build-date">
-                        Build date
-                    </label>
-
-                    <input
-                        id="build-date"
-                        name="build-date"
-                        type="date"
-                        required
-                    >
+<footer class="footer">
+    <p>
+        Game Builds
+    </p>
+</footer>
 
 
-                    <label for="status">
-                        Status
-                    </label>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase.js"></script>
+<script src="manage-game.js"></script>
 
-                    <select
-                        id="status"
-                        name="status"
-                        required
-                    >
-                        <option value="PROTOTYPE">
-                            PROTOTYPE
-                        </option>
-
-                        <option value="ALPHA">
-                            ALPHA
-                        </option>
-
-                        <option value="BETA">
-                            BETA
-                        </option>
-
-                        <option value="RELEASE">
-                            RELEASE
-                        </option>
-                    </select>
-
-
-                    <label for="description">
-                        Description
-                    </label>
-
-                    <textarea
-                        id="description"
-                        name="description"
-                        rows="5"
-                        placeholder="Describe this build..."
-                        required
-                    ></textarea>
-
-
-                    <label for="build-url">
-                        Build URL
-                    </label>
-
-                    <input
-                        id="build-url"
-                        name="build-url"
-                        type="text"
-                        placeholder="Builds/v0.2/"
-                        required
-                    >
-
-
-                    <div class="section-heading" style="margin-top:30px;">
-
-                        <div>
-                            <span class="eyebrow">
-                                CHANGELOG
-                            </span>
-
-                            <h2>
-                                What's new?
-                            </h2>
-                        </div>
-
-                        <button
-                            type="button"
-                            id="add-change-button"
-                            class="btn"
-                        >
-                            + Add change
-                        </button>
-
-                    </div>
-
-
-                    <div id="changelog-list">
-
-                        <div class="change-row">
-
-                            <input
-                                type="text"
-                                class="change-input"
-                                placeholder="What changed?"
-                                required
-                            >
-
-                            <button
-                                type="button"
-                                class="btn remove-change-button"
-                            >
-                                Remove
-                            </button>
-
-                        </div>
-
-                    </div>
-
-
-                    <div
-                        id="form-message"
-                        style="margin-top:20px;"
-                    ></div>
-
-
-                    <div style="
-                        display:flex;
-                        gap:10px;
-                        flex-wrap:wrap;
-                        margin-top:25px;
-                    ">
-
-                        <button
-                            type="submit"
-                            class="btn primary"
-                        >
-                            Add build
-                        </button>
-
-                        <button
-                            type="button"
-                            id="cancel-add-build-button"
-                            class="btn"
-                        >
-                            Cancel
-                        </button>
-
-                    </div>
-
-                </div>
-
-            </form>
-
-        </section>
-
-    </main>
-
-
-    <footer class="footer">
-        <p>
-            Game Builds
-        </p>
-    </footer>
-
-
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase.js"></script>
-    <script src="manage-game.js"></script>
 
 </body>
 </html>
