@@ -45,9 +45,6 @@ async function loadAdminPage() {
         return;
     }
 
-    /*
-     * Load current user's profile.
-     */
     const {
         data: profile,
         error: profileError
@@ -75,9 +72,6 @@ async function loadAdminPage() {
 
     currentProfile = profile;
 
-    /*
-     * Only admins may use this page.
-     */
     if (profile.is_admin !== true) {
 
         document.querySelector("main").innerHTML = `
@@ -105,6 +99,46 @@ async function loadAdminPage() {
                 </div>
             </section>
         `;
+
+        return;
+    }
+
+    if (profile.is_suspended === true) {
+
+        document.querySelector("main").innerHTML = `
+            <section class="hero">
+                <div class="hero-content">
+
+                    <span class="eyebrow">
+                        ACCOUNT SUSPENDED
+                    </span>
+
+                    <h1>Access blocked.</h1>
+
+                    <p>
+                        Your admin account is currently suspended.
+                    </p>
+
+                    <button
+                        id="suspended-logout"
+                        class="btn primary"
+                    >
+                        Log out
+                    </button>
+
+                </div>
+            </section>
+        `;
+
+        document
+            .getElementById("suspended-logout")
+            .addEventListener("click", async () => {
+
+                await supabaseClient.auth.signOut();
+
+                window.location.href =
+                    "login.html";
+            });
 
         return;
     }
@@ -156,10 +190,13 @@ function renderUsers(users) {
 
         usersList.innerHTML = `
             <div class="build-card">
+
                 <h2>No users</h2>
+
                 <p>
                     There are no users yet.
                 </p>
+
             </div>
         `;
 
@@ -308,7 +345,6 @@ createUserButton.addEventListener(
         createUserSection.scrollIntoView({
             behavior: "smooth"
         });
-
     }
 );
 
@@ -322,7 +358,6 @@ cancelCreateUser.addEventListener(
 
         createUserSection.style.display =
             "none";
-
     }
 );
 
@@ -336,26 +371,20 @@ createUserForm.addEventListener(
 
         const username =
             document
-                .getElementById(
-                    "new-username"
-                )
+                .getElementById("new-username")
                 .value
                 .trim()
                 .toLowerCase();
 
         const displayName =
             document
-                .getElementById(
-                    "new-display-name"
-                )
+                .getElementById("new-display-name")
                 .value
                 .trim();
 
         const password =
             document
-                .getElementById(
-                    "new-password"
-                )
+                .getElementById("new-password")
                 .value;
 
         if (!/^[a-z0-9_]+$/.test(username)) {
@@ -425,7 +454,8 @@ createUserForm.addEventListener(
                 createUserSection.style.display =
                     "none";
 
-                createUserMessage.innerHTML = "";
+                createUserMessage.innerHTML =
+                    "";
 
             }, 800);
 
@@ -445,7 +475,6 @@ createUserForm.addEventListener(
             submitCreateUser.textContent =
                 "Create user";
         }
-
     }
 );
 
@@ -469,64 +498,72 @@ async function suspendUser(userId) {
         return;
     }
 
-    const {
-        error
-    } = await supabaseClient
-        .from("profiles")
-        .update({
-            is_suspended: true,
-            suspended_until: null
-        })
-        .eq("id", userId);
-
-    if (error) {
-
-        console.error(error);
-
-        showAdminMessage(
-            "Could not suspend user."
-        );
-
-        return;
-    }
-
-    showAdminMessage(
-        "User suspended.",
-        "success"
+    await manageUser(
+        userId,
+        "suspend"
     );
-
-    await loadUsers();
 }
 
 async function reactivateUser(userId) {
 
-    const {
-        error
-    } = await supabaseClient
-        .from("profiles")
-        .update({
-            is_suspended: false,
-            suspended_until: null
-        })
-        .eq("id", userId);
+    await manageUser(
+        userId,
+        "reactivate"
+    );
+}
 
-    if (error) {
+async function manageUser(
+    userId,
+    action
+) {
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .functions
+            .invoke(
+                "admin-manage-user",
+                {
+                    body: {
+                        userId,
+                        action
+                    }
+                }
+            );
+
+        if (error) {
+            throw error;
+        }
+
+        if (!data?.success) {
+
+            throw new Error(
+                data?.error ||
+                "Could not update user."
+            );
+        }
+
+        showAdminMessage(
+            action === "suspend"
+                ? "User suspended."
+                : "User reactivated.",
+            "success"
+        );
+
+        await loadUsers();
+
+    } catch (error) {
 
         console.error(error);
 
         showAdminMessage(
-            "Could not reactivate user."
+            error.message ||
+            "Could not update user."
         );
-
-        return;
     }
-
-    showAdminMessage(
-        "User reactivated.",
-        "success"
-    );
-
-    await loadUsers();
 }
 
 function showAdminMessage(
@@ -583,7 +620,6 @@ logoutButton.addEventListener(
 
         window.location.href =
             "login.html";
-
     }
 );
 
