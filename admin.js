@@ -633,6 +633,20 @@ function renderUsers(
                                         `
                             }
 
+                            ${
+                                !user.is_admin && !isCurrentUser
+                                    ? `
+                                        <button
+                                            class="btn"
+                                            style="background-color: #ff6b81; color: white;"
+                                            onclick="deleteUser('${user.id}')"
+                                        >
+                                            Delete
+                                        </button>
+                                    `
+                                    : ""
+                            }
+
 
                             ${
                                 isCurrentUser
@@ -963,6 +977,69 @@ async function manageUser(
         showAdminMessage(
             error.message ||
             "Could not update user."
+        );
+    }
+}
+
+
+/* =========================================
+   DELETE USER
+========================================= */
+
+async function deleteUser(userId) {
+
+    if (userId === currentProfile.id) {
+        alert("You cannot delete your own account.");
+        return;
+    }
+
+    const confirmed = confirm(
+        "Are you sure you want to delete this user? This cannot be undone."
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .functions
+            .invoke(
+                "admin-delete-user",
+                {
+                    body: { userId }
+                }
+            );
+
+        if (error) {
+            throw error;
+        }
+
+        if (!data?.success) {
+            throw new Error(
+                data?.error ||
+                "Could not delete user."
+            );
+        }
+
+        showAdminMessage(
+            "User successfully deleted.",
+            "success"
+        );
+
+        await loadDashboardData();
+
+    } catch (error) {
+
+        console.error(error);
+
+        showAdminMessage(
+            error.message ||
+            "Could not delete user."
         );
     }
 }
