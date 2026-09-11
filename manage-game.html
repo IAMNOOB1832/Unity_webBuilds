@@ -1,12 +1,16 @@
 <!DOCTYPE html>
+
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Manage Game — Game Builds</title>
 
-    <link rel="stylesheet" href="style.css">
+<title>Manage Game — Game Builds</title>
+
+<link rel="stylesheet" href="style.css">
+
+
 </head>
 
 <body>
@@ -82,6 +86,7 @@
             </button>
 
         </div>
+
 
         <div id="builds-list" class="build-history">
 
@@ -186,63 +191,12 @@
                 ></textarea>
 
 
-                <!-- UPLOAD METHOD -->
+                <!-- UNITY BUILD -->
 
                 <div style="margin-top:30px;">
 
                     <span class="eyebrow">
-                        BUILD METHOD
-                    </span>
-
-                    <h2>
-                        How do you want to add this build?
-                    </h2>
-
-                    <div
-                        style="
-                            display:flex;
-                            gap:10px;
-                            flex-wrap:wrap;
-                            margin-top:20px;
-                        "
-                    >
-
-                        <button
-                            type="button"
-                            id="automatic-method-button"
-                            class="btn primary"
-                        >
-                            Automatic upload
-                        </button>
-
-                        <button
-                            type="button"
-                            id="manual-method-button"
-                            class="btn"
-                        >
-                            Manual GitHub
-                        </button>
-
-                    </div>
-
-                    <input
-                        type="hidden"
-                        id="upload-method"
-                        value="automatic"
-                    >
-
-                </div>
-
-
-                <!-- AUTOMATIC UPLOAD -->
-
-                <div
-                    id="automatic-upload-section"
-                    style="margin-top:30px;"
-                >
-
-                    <span class="eyebrow">
-                        AUTOMATIC UPLOAD
+                        UNITY WEBGL
                     </span>
 
                     <h2>
@@ -259,6 +213,7 @@
                         webkitdirectory
                         directory
                         multiple
+                        required
                     >
 
                     <p
@@ -271,127 +226,11 @@
                 </div>
 
 
-                <!-- MANUAL GITHUB -->
-
-                <div
-                    id="manual-upload-section"
-                    style="display:none; margin-top:30px;"
-                >
-
-                    <span class="eyebrow">
-                        MANUAL GITHUB
-                    </span>
-
-                    <h2>
-                        Upload through GitHub
-                    </h2>
-
-                    <p>
-                        For larger Unity WebGL builds, upload the complete
-                        build folder manually to the GitHub repository.
-                    </p>
-
-                    <div
-                        class="build-card"
-                        style="margin-top:20px;"
-                    >
-
-                        <p>
-                            <strong>Repository</strong>
-                        </p>
-
-                        <p>
-                            597405/GameBuildFilesUnityWeb
-                        </p>
-
-                        <p style="margin-top:20px;">
-                            <strong>Folder</strong>
-                        </p>
-
-                        <p id="manual-folder-path">
-                            Loading...
-                        </p>
-
-                        <p style="margin-top:20px;">
-                            <strong>GitHub Pages URL</strong>
-                        </p>
-
-                        <p id="manual-build-url">
-                            Loading...
-                        </p>
-
-                        <div
-                            style="
-                                display:flex;
-                                gap:10px;
-                                flex-wrap:wrap;
-                                margin-top:20px;
-                            "
-                        >
-
-                            <a
-                                id="open-github-button"
-                                href="#"
-                                class="btn"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                Open GitHub repository
-                            </a>
-
-                            <a
-                                id="open-build-button"
-                                href="#"
-                                class="btn"
-                                target="_blank"
-                                rel="noopener"
-                            >
-                                Open build
-                            </a>
-
-                        </div>
-
-                        <p style="margin-top:20px;">
-                            Upload the Unity WebGL folder to the folder above.
-                            Make sure the folder contains <strong>index.html</strong>.
-                        </p>
-
-                        <label
-                            style="
-                                display:flex;
-                                align-items:flex-start;
-                                gap:10px;
-                                margin-top:20px;
-                                cursor:pointer;
-                            "
-                        >
-
-                            <input
-                                type="checkbox"
-                                id="manual-upload-confirmation"
-                            >
-
-                            <span>
-                                I have uploaded this build to GitHub and
-                                verified that the build opens correctly.
-                            </span>
-
-                        </label>
-
-                    </div>
-
-                </div>
-
-
                 <!-- CHANGELOG -->
 
-                <div
-                    class="section-heading"
-                    style="margin-top:30px;"
-                >
+                <div class="section-heading" style="margin-top:30px;">
 
                     <div>
-
                         <span class="eyebrow">
                             CHANGELOG
                         </span>
@@ -399,7 +238,6 @@
                         <h2>
                             What's new?
                         </h2>
-
                     </div>
 
                     <button
@@ -442,19 +280,16 @@
                 ></div>
 
 
-                <div
-                    style="
-                        display:flex;
-                        gap:10px;
-                        flex-wrap:wrap;
-                        margin-top:25px;
-                    "
-                >
+                <div style="
+                    display:flex;
+                    gap:10px;
+                    flex-wrap:wrap;
+                    margin-top:25px;
+                ">
 
                     <button
                         type="submit"
                         class="btn primary"
-                        id="submit-build-button"
                     >
                         Upload build
                     </button>
@@ -479,17 +314,16 @@
 
 
 <footer class="footer">
-
     <p>
         Game Builds
     </p>
-
 </footer>
 
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="manage-game.js"></script>
+
 
 </body>
 </html>
