@@ -1,56 +1,150 @@
-const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+const client = window.supabaseClient;
 
 const loginForm = document.getElementById("login-form");
+const usernameInput = document.getElementById("username");
+const passwordInput = document.getElementById("password");
 const loginMessage = document.getElementById("login-message");
 
+
+/*
+ * ========================================================
+ * LOGIN
+ * ========================================================
+ */
+
 loginForm.addEventListener("submit", async (event) => {
+
     event.preventDefault();
 
-    const username = document
-        .getElementById("username")
-        .value
-        .trim()
-        .toLowerCase();
+    loginMessage.textContent = "";
+    loginMessage.style.color = "";
 
-    const password = document.getElementById("password").value;
 
-    loginMessage.textContent = "Logging in...";
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value;
 
-    const { data, error } =
-        await supabaseClient.functions.invoke("login-user", {
-            body: {
-                username: username,
-                password: password
-            }
-        });
 
-    if (error || !data?.access_token) {
-        console.error(error, data);
+    if (!username || !password) {
 
         loginMessage.textContent =
-            data?.error || "Username or password is incorrect.";
+            "Please enter your username and password.";
 
         return;
     }
 
-    // Save the Supabase session returned by our Edge Function.
-    const { error: sessionError } =
-        await supabaseClient.auth.setSession({
+
+    try {
+
+        loginMessage.textContent =
+            "Logging in...";
+
+
+        const response = await fetch(
+            "https://rfbsjpghlhcxqesvftta.supabase.co/functions/v1/login-user",
+            {
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "apikey": window.SUPABASE_KEY
+                },
+
+                body: JSON.stringify({
+                    username: username,
+                    password: password
+                })
+            }
+        );
+
+
+        const data = await response.json();
+
+
+        if (!response.ok) {
+
+            console.error("Login error:", data);
+
+            loginMessage.textContent =
+                data.error ||
+                "Login failed.";
+
+            return;
+        }
+
+
+        if (
+            !data.access_token ||
+            !data.refresh_token
+        ) {
+
+            console.error(
+                "Login response missing tokens:",
+                data
+            );
+
+            loginMessage.textContent =
+                "Login failed: invalid server response.";
+
+            return;
+        }
+
+
+        /*
+         * Save the Supabase session.
+         */
+
+        const {
+            error: sessionError
+        } = await client.auth.setSession({
             access_token: data.access_token,
             refresh_token: data.refresh_token
         });
 
-    if (sessionError) {
-        console.error(sessionError);
+
+        if (sessionError) {
+
+            console.error(
+                "Session error:",
+                sessionError
+            );
+
+            loginMessage.textContent =
+                "Login failed while creating your session.";
+
+            return;
+        }
+
+
+        /*
+         * Login successful.
+         */
 
         loginMessage.textContent =
-            "Login succeeded, but the session could not be created.";
+            "Login successful!";
 
-        return;
+
+        /*
+         * Small delay so the user can see
+         * the success message.
+         */
+
+        setTimeout(() => {
+
+            window.location.href =
+                "dashboard.html";
+
+        }, 300);
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected login error:",
+            error
+        );
+
+        loginMessage.textContent =
+            "Something went wrong. Please try again.";
     }
 
-    window.location.href = "dashboard.html";
 });
