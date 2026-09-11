@@ -1,7 +1,4 @@
-const supabaseClient = window.supabase.createClient(
-    SUPABASE_URL,
-    SUPABASE_KEY
-);
+const supabaseClient = window.supabaseClient;
 
 
 const welcomeTitle =
@@ -42,6 +39,17 @@ const adminNavLink =
 
 let currentUser = null;
 let currentGames = [];
+
+
+/* =========================================
+   CHECK SUPABASE
+========================================= */
+
+if (!supabaseClient) {
+    console.error(
+        "Supabase client is niet beschikbaar."
+    );
+}
 
 
 /* =========================================
@@ -114,16 +122,21 @@ async function loadDashboard() {
      */
 
     if (
-        profile.is_admin === true
+        adminNavLink
     ) {
 
-        adminNavLink.style.display =
-            "inline-block";
+        if (
+            profile.is_admin === true
+        ) {
 
-    } else {
+            adminNavLink.style.display =
+                "inline-block";
 
-        adminNavLink.style.display =
-            "none";
+        } else {
+
+            adminNavLink.style.display =
+                "none";
+        }
     }
 
 
@@ -157,32 +170,37 @@ async function loadDashboard() {
         `;
 
 
-        quickActions.innerHTML =
-            "";
+        if (quickActions) {
+            quickActions.innerHTML =
+                "";
+        }
 
 
-        accountInfo.innerHTML = `
+        if (accountInfo) {
 
-            <p>
-                <strong>
-                    Username:
-                </strong>
+            accountInfo.innerHTML = `
 
-                ${escapeHTML(
-                    profile.username
-                )}
-            </p>
+                <p>
+                    <strong>
+                        Username:
+                    </strong>
+
+                    ${escapeHTML(
+                        profile.username
+                    )}
+                </p>
 
 
-            <p>
-                <strong>
-                    Status:
-                </strong>
+                <p>
+                    <strong>
+                        Status:
+                    </strong>
 
-                SUSPENDED
-            </p>
+                    SUSPENDED
+                </p>
 
-        `;
+            `;
+        }
 
 
         return;
@@ -205,46 +223,49 @@ async function loadDashboard() {
      * Account information.
      */
 
-    accountInfo.innerHTML = `
+    if (accountInfo) {
 
-        <p>
+        accountInfo.innerHTML = `
 
-            <strong>
-                Username:
-            </strong>
+            <p>
 
-            ${escapeHTML(
-                profile.username
-            )}
+                <strong>
+                    Username:
+                </strong>
 
-        </p>
+                ${escapeHTML(
+                    profile.username
+                )}
 
-
-        <p>
-
-            <strong>
-                Display name:
-            </strong>
-
-            ${escapeHTML(
-                profile.display_name ||
-                profile.username
-            )}
-
-        </p>
+            </p>
 
 
-        <p>
+            <p>
 
-            <strong>
-                Status:
-            </strong>
+                <strong>
+                    Display name:
+                </strong>
 
-            ACTIVE
+                ${escapeHTML(
+                    profile.display_name ||
+                    profile.username
+                )}
 
-        </p>
+            </p>
 
-    `;
+
+            <p>
+
+                <strong>
+                    Status:
+                </strong>
+
+                ACTIVE
+
+            </p>
+
+        `;
+    }
 
 
     /*
@@ -278,6 +299,7 @@ async function loadDashboard() {
     if (gamesError) {
 
         console.error(
+            "Games error:",
             gamesError
         );
 
@@ -326,21 +348,24 @@ async function loadDashboard() {
         `;
 
 
-        quickActions.innerHTML = `
+        if (quickActions) {
 
-            <div class="build-card">
+            quickActions.innerHTML = `
 
-                <h2>
-                    Quick actions
-                </h2>
+                <div class="build-card">
 
-                <p>
-                    Add a game first before creating builds.
-                </p>
+                    <h2>
+                        Quick actions
+                    </h2>
 
-            </div>
+                    <p>
+                        Add a game first before creating builds.
+                    </p>
 
-        `;
+                </div>
+
+            `;
+        }
 
 
         return;
@@ -378,6 +403,7 @@ async function loadDashboard() {
     if (buildsError) {
 
         console.error(
+            "Builds error:",
             buildsError
         );
 
@@ -547,6 +573,11 @@ function renderQuickActions(
     games
 ) {
 
+    if (!quickActions) {
+        return;
+    }
+
+
     const firstGame =
         games[0];
 
@@ -583,33 +614,39 @@ function renderQuickActions(
    LOGOUT
 ========================================= */
 
-logoutButton.addEventListener(
-    "click",
-    async () => {
+if (logoutButton) {
 
-        await supabaseClient
-            .auth
-            .signOut();
+    logoutButton.addEventListener(
+        "click",
+        async () => {
+
+            await supabaseClient
+                .auth
+                .signOut();
 
 
-        window.location.href =
-            "login.html";
-    }
-);
+            window.location.href =
+                "login.html";
+        }
+    );
+}
 
 
 /* =========================================
    ADD GAME
 ========================================= */
 
-addGameButton.addEventListener(
-    "click",
-    () => {
+if (addGameButton) {
 
-        window.location.href =
-            "add-game.html";
-    }
-);
+    addGameButton.addEventListener(
+        "click",
+        () => {
+
+            window.location.href =
+                "add-game.html";
+        }
+    );
+}
 
 
 /* =========================================
@@ -657,3 +694,4 @@ function escapeHTML(
 ========================================= */
 
 loadDashboard();
+
