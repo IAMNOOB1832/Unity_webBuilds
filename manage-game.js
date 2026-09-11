@@ -42,6 +42,14 @@ const unityBuildInput =
 const selectedFilesText =
     document.getElementById("selected-files");
 
+// Handmatige upload elementen
+const uploadModeRadios = document.querySelectorAll('input[name="upload-mode"]');
+const autoUploadBox = document.getElementById("auto-upload-box");
+const manualUploadBox = document.getElementById("manual-upload-box");
+const manualSlugHint = document.getElementById("manual-slug-hint");
+const manualVersionHint = document.getElementById("manual-version-hint");
+const versionInput = document.getElementById("version");
+
 const params =
     new URLSearchParams(window.location.search);
 
@@ -50,6 +58,31 @@ const gameId =
 
 let currentUser = null;
 let currentGame = null;
+
+
+/* =========================
+   UPLOAD MODE TOGGLE
+========================= */
+
+uploadModeRadios.forEach(radio => {
+    radio.addEventListener("change", (e) => {
+        if (e.target.value === "manual") {
+            autoUploadBox.style.display = "none";
+            manualUploadBox.style.display = "block";
+            unityBuildInput.removeAttribute("required");
+        } else {
+            autoUploadBox.style.display = "block";
+            manualUploadBox.style.display = "none";
+            unityBuildInput.setAttribute("required", "true");
+        }
+    });
+});
+
+versionInput.addEventListener("input", (e) => {
+    if (manualVersionHint) {
+        manualVersionHint.textContent = e.target.value || "v...";
+    }
+});
 
 
 /* =========================
@@ -142,6 +175,10 @@ async function loadGame() {
     gameDescription.textContent =
         game.description ||
         "No description.";
+
+    if (manualSlugHint) {
+        manualSlugHint.textContent = game.slug;
+    }
 
     await loadBuilds();
 
@@ -455,7 +492,7 @@ addChangeButton.addEventListener(
 
 
 /* =========================
-   ADD BUILD
+   ADD BUILD (SUBMIT)
 ========================= */
 
 addBuildForm.addEventListener(
@@ -504,10 +541,7 @@ addBuildForm.addEventListener(
                 .map(input => input.value.trim())
                 .filter(Boolean);
 
-            const files =
-                Array.from(
-                    unityBuildInput.files || []
-                );
+            const uploadMode = document.querySelector('input[name="upload-mode"]:checked').value;
 
 
             /* =========================
@@ -535,221 +569,135 @@ addBuildForm.addEventListener(
                 return;
             }
 
-            if (files.length === 0) {
-                formMessage.textContent =
-                    "Please select your Unity WebGL build folder.";
+            let buildUrl = "";
 
-                return;
-            }
+            if (uploadMode === "auto") {
+                const files = Array.from(unityBuildInput.files || []);
 
-            const indexFile =
-                files.find(file => {
+                if (files.length === 0) {
+                    formMessage.textContent = "Please select your Unity WebGL build folder.";
+                    return;
+                }
 
-                    const relativePath =
-                        file.webkitRelativePath ||
-                        file.name;
-
-                    return relativePath
-                        .split("/")
-                        .pop()
-                        .toLowerCase() === "index.html";
+                const indexFile = files.find(file => {
+                    const relativePath = file.webkitRelativePath || file.name;
+                    return relativePath.split("/").pop().toLowerCase() === "index.html";
                 });
 
-            if (!indexFile) {
-                formMessage.textContent =
-                    "The selected folder does not contain index.html.";
-
-                return;
-            }
-
-
-            /* =========================
-               UPLOAD FILES ONE BY ONE
-            ========================= */
-
-            const uploadedFiles = [];
-
-            for (
-                let i = 0;
-                i < files.length;
-                i++
-            ) {
-
-                const file =
-                    files[i];
-
-                let relativePath =
-                    file.webkitRelativePath ||
-                    file.name;
-
-                const pathParts =
-                    relativePath
-                        .split("/")
-                        .filter(Boolean);
-
-                if (pathParts.length > 1) {
-                    pathParts.shift();
+                if (!indexFile) {
+                    formMessage.textContent = "The selected folder does not contain index.html.";
+                    return;
                 }
 
-                relativePath =
-                    pathParts.join("/");
+                /* =========================
+                   AUTO UPLOAD: FILES ONE BY ONE
+                ========================= */
+                const uploadedFiles = [];
 
-                if (!relativePath) {
-                    throw new Error(
-                        "Invalid file path."
-                    );
+                for (let i = 0; i < files.length; i++) {
+                    const file = files[i];
+                    let relativePath = file.webkitRelativePath || file.name;
+                    const pathParts = relativePath.split("/").filter(Boolean);
+
+                    if (pathParts.length > 1) {
+                        pathParts.shift();
+                    }
+
+                    relativePath = pathParts.join("/");
+
+                    if (!relativePath) {
+                        throw new Error("Invalid file path.");
+                    }
+
+                    const MAX_FILE_SIZE = 60 * 1024 * 1024;
+                    if (file.size > MAX_FILE_SIZE) {
+                        throw new Error(
+                            `${file.name} is too large (${formatBytes(file.size)}). ` +
+                            `Use Manual Upload for files larger than 60 MB.`
+                        );
+                    }
+
+                    formMessage.textContent = `Uploading file ${i + 1}/${files.length}: ${relativePath}`;
+
+                    const arrayBuffer = await file.arrayBuffer();
+                    const base64 = arrayBufferToBase64(arrayBuffer);
+
+                    const { data: uploadData, error: uploadError } =
+                        await supabaseClient.functions.invoke(
+                            "github-upload-file",
+                            {
+                                body: {
+                                    gameSlug: currentGame.slug,
+                                    version: version,
+                                    filePath: relativePath,
+                                    contentBase64: base64
+                                }
+                            }
+                        );
+
+                    if (uploadError) {
+                        throw new Error(uploadError.message || `Could not upload ${relativePath}.`);
+                    }
+
+                    if (!uploadData || !uploadData.success || !uploadData.sha) {
+                        throw new Error(uploadData?.error || `GitHub could not upload ${relativePath}.`);
+                    }
+
+                    uploadedFiles.push({
+                        path: relativePath,
+                        sha: uploadData.sha
+                    });
+
+                    await new Promise(resolve => setTimeout(resolve, 0));
                 }
 
-                /*
-                 * Individual files stay below
-                 * the safe Edge Function memory range.
-                 */
-                const MAX_FILE_SIZE =
-                    60 * 1024 * 1024;
+                formMessage.textContent = "All files uploaded. Creating GitHub commit...";
 
-                if (
-                    file.size >
-                    MAX_FILE_SIZE
-                ) {
-                    throw new Error(
-                        `${file.name} is too large (${formatBytes(file.size)}). ` +
-                        `For now, individual files must be smaller than 60 MB.`
-                    );
-                }
-
-                formMessage.textContent =
-                    `Uploading file ${i + 1}/${files.length}: ${relativePath}`;
-
-                /*
-                 * Read ONLY this file.
-                 */
-                const arrayBuffer =
-                    await file.arrayBuffer();
-
-                const base64 =
-                    arrayBufferToBase64(
-                        arrayBuffer
-                    );
-
-                /*
-                 * Upload ONLY this file
-                 * to the Edge Function.
-                 */
-                const {
-                    data: uploadData,
-                    error: uploadError
-                } =
+                const { data: commitData, error: commitError } =
                     await supabaseClient.functions.invoke(
-                        "github-upload-file",
+                        "github-create-commit",
                         {
                             body: {
-                                gameSlug:
-                                    currentGame.slug,
-
-                                version:
-                                    version,
-
-                                filePath:
-                                    relativePath,
-
-                                contentBase64:
-                                    base64
+                                gameSlug: currentGame.slug,
+                                version: version,
+                                files: uploadedFiles,
+                                commitMessage: `Add ${currentGame.name} ${version}`
                             }
                         }
                     );
 
-                if (uploadError) {
-                    console.error(
-                        "File upload error:",
-                        uploadError
-                    );
-
-                    throw new Error(
-                        uploadError.message ||
-                        `Could not upload ${relativePath}.`
-                    );
+                if (commitError) {
+                    throw new Error(commitError.message || "Could not create GitHub commit.");
                 }
 
-                if (
-                    !uploadData ||
-                    !uploadData.success ||
-                    !uploadData.sha
-                ) {
-                    throw new Error(
-                        uploadData?.error ||
-                        `GitHub could not upload ${relativePath}.`
-                    );
+                if (!commitData || !commitData.success) {
+                    throw new Error(commitData?.error || "GitHub commit failed.");
                 }
 
-                uploadedFiles.push({
-                    path:
-                        relativePath,
+                buildUrl = commitData.url;
 
-                    sha:
-                        uploadData.sha
+            } else {
+                /* =========================
+                   MANUAL UPLOAD: VERIFY GITHUB
+                ========================= */
+                formMessage.textContent = "Verifying manual upload on GitHub...";
+
+                const { data: verifyData, error: verifyError } = await supabaseClient.functions.invoke("verify-github-build", {
+                    body: {
+                        gameSlug: currentGame.slug,
+                        version: version
+                    }
                 });
 
-                /*
-                 * Give the browser a chance
-                 * to release temporary memory.
-                 */
-                await new Promise(
-                    resolve =>
-                        setTimeout(resolve, 0)
-                );
-            }
+                if (verifyError) {
+                    throw verifyError;
+                }
 
+                if (!verifyData?.success) {
+                    throw new Error(verifyData?.error || "GitHub verification failed. Did you push files to the correct folder?");
+                }
 
-            /* =========================
-               CREATE GITHUB COMMIT
-            ========================= */
-
-            formMessage.textContent =
-                "All files uploaded. Creating GitHub commit...";
-
-            const {
-                data: commitData,
-                error: commitError
-            } =
-                await supabaseClient.functions.invoke(
-                    "github-create-commit",
-                    {
-                        body: {
-                            gameSlug:
-                                currentGame.slug,
-
-                            version:
-                                version,
-
-                            files:
-                                uploadedFiles,
-
-                            commitMessage:
-                                `Add ${currentGame.name} ${version}`
-                        }
-                    }
-                );
-
-            if (commitError) {
-                console.error(
-                    "Commit error:",
-                    commitError
-                );
-
-                throw new Error(
-                    commitError.message ||
-                    "Could not create GitHub commit."
-                );
-            }
-
-            if (
-                !commitData ||
-                !commitData.success
-            ) {
-                throw new Error(
-                    commitData?.error ||
-                    "GitHub commit failed."
-                );
+                buildUrl = verifyData.buildUrl;
             }
 
 
@@ -757,16 +705,10 @@ addBuildForm.addEventListener(
                SAVE BUILD METADATA
             ========================= */
 
-            formMessage.textContent =
-                "GitHub upload successful. Saving build...";
-
-            const buildUrl =
-                commitData.url;
+            formMessage.textContent = "Saving build metadata...";
 
             if (!buildUrl) {
-                throw new Error(
-                    "GitHub upload succeeded, but no build URL was returned."
-                );
+                throw new Error("No build URL available.");
             }
 
             const {
@@ -776,35 +718,21 @@ addBuildForm.addEventListener(
                 await supabaseClient
                     .from("builds")
                     .insert({
-                        game_id:
-                            currentGame.id,
-
-                        version:
-                            version,
-
-                        build_date:
-                            buildDate,
-
-                        status:
-                            status,
-
-                        description:
-                            description,
-
-                        url:
-                            buildUrl
+                        game_id: currentGame.id,
+                        version: version,
+                        build_date: buildDate,
+                        status: status,
+                        description: description,
+                        url: buildUrl
                     })
                     .select()
                     .single();
 
             if (buildError) {
-                console.error(
-                    buildError
-                );
-
-                throw new Error(
-                    "Build was uploaded to GitHub, but could not be saved in Supabase."
-                );
+                if (buildError.code === '23505') {
+                    throw new Error(`Version ${version} already exists in the database for this game.`);
+                }
+                throw new Error("Build was processed, but could not be saved in Supabase.");
             }
 
 
@@ -813,14 +741,10 @@ addBuildForm.addEventListener(
             ========================= */
 
             if (changes.length > 0) {
-
                 const changelogRows =
                     changes.map(change => ({
-                        build_id:
-                            build.id,
-
-                        change_text:
-                            change
+                        build_id: build.id,
+                        change_text: change
                     }));
 
                 const {
@@ -828,38 +752,17 @@ addBuildForm.addEventListener(
                 } =
                     await supabaseClient
                         .from("build_changelog")
-                        .insert(
-                            changelogRows
-                        );
+                        .insert(changelogRows);
 
                 if (changelogError) {
-                    console.error(
-                        changelogError
-                    );
-
-                    formMessage.textContent =
-                        "Build uploaded and saved, but changelog could not be saved.";
-
-                    await loadBuilds();
-
-                    return;
+                    console.error(changelogError);
                 }
             }
 
 
             /* =========================
-               RECORD ONE BUILD UPLOAD
+               RECORD UPLOAD LOG
             ========================= */
-
-            /*
-             * IMPORTANT:
-             *
-             * One complete Unity build counts
-             * as ONE upload.
-             *
-             * The individual files uploaded above
-             * do NOT create upload_logs entries.
-             */
 
             const {
                 error: uploadLogError
@@ -867,30 +770,12 @@ addBuildForm.addEventListener(
                 await supabaseClient
                     .from("upload_logs")
                     .insert({
-                        user_id:
-                            currentUser.id,
-
-                        build_id:
-                            build.id
+                        user_id: currentUser.id,
+                        build_id: build.id
                     });
 
             if (uploadLogError) {
-                console.error(
-                    "Upload log error:",
-                    uploadLogError
-                );
-
-                /*
-                 * The build itself already succeeded.
-                 * We do not delete the build just because
-                 * the usage log failed.
-                 */
-                formMessage.textContent =
-                    "Build uploaded successfully, but the upload usage could not be recorded.";
-
-                await loadBuilds();
-
-                return;
+                console.error("Upload log error:", uploadLogError);
             }
 
 
@@ -899,7 +784,7 @@ addBuildForm.addEventListener(
             ========================= */
 
             formMessage.textContent =
-                "Build successfully uploaded!";
+                "Build successfully registered and published!";
 
             addBuildForm.reset();
 
@@ -910,13 +795,17 @@ addBuildForm.addEventListener(
 
             await loadBuilds();
 
+            setTimeout(() => {
+                hideAddBuildForm();
+            }, 1500);
+
         } catch (error) {
 
             console.error(error);
 
             formMessage.textContent =
                 error.message ||
-                "Something went wrong while uploading the build.";
+                "Something went wrong while processing the build.";
         }
     }
 );
@@ -979,7 +868,6 @@ async function deleteBuild(buildId) {
         return;
     }
 
-    // Delete changelog first
     const {
         error: changelogError
     } =
@@ -989,19 +877,11 @@ async function deleteBuild(buildId) {
             .eq("build_id", buildId);
 
     if (changelogError) {
-
-        console.error(
-            changelogError
-        );
-
-        alert(
-            "Could not delete the build changelog."
-        );
-
+        console.error(changelogError);
+        alert("Could not delete the build changelog.");
         return;
     }
 
-    // Delete build
     const {
         error: buildError
     } =
@@ -1011,25 +891,10 @@ async function deleteBuild(buildId) {
             .eq("id", buildId);
 
     if (buildError) {
-
-        console.error(
-            buildError
-        );
-
-        alert(
-            "Could not delete the build."
-        );
-
+        console.error(buildError);
+        alert("Could not delete the build.");
         return;
     }
-
-    /*
-     * upload_logs is intentionally NOT deleted.
-     *
-     * A deleted build still counts toward the
-     * weekly upload limit so users cannot bypass
-     * the limit by uploading and deleting builds.
-     */
 
     await loadBuilds();
 }
@@ -1184,4 +1049,3 @@ function arrayBufferToBase64(buffer) {
 ========================= */
 
 loadGame();
- 
