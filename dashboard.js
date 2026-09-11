@@ -1,6 +1,3 @@
-const supabaseClient = window.supabaseClient;
-
-
 const welcomeTitle =
     document.getElementById(
         "welcome-title"
