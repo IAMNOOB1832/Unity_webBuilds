@@ -1,615 +1,557 @@
-const welcomeTitle =
-    document.getElementById(
-        "welcome-title"
-    );
+const client = window.supabaseClient;
 
-const gamesList =
-    document.getElementById(
-        "games-list"
-    );
+const gamesList = document.getElementById("games-list");
+const quickActions = document.getElementById("quick-actions");
+const accountInfo = document.getElementById("account-info");
+const welcomeTitle = document.getElementById("welcome-title");
 
-const logoutButton =
-    document.getElementById(
-        "logout-button"
-    );
-
-const addGameButton =
-    document.getElementById(
-        "add-game-button"
-    );
-
-const quickActions =
-    document.getElementById(
-        "quick-actions"
-    );
-
-const accountInfo =
-    document.getElementById(
-        "account-info"
-    );
-
-const adminNavLink =
-    document.getElementById(
-        "admin-nav-link"
-    );
+const logoutButton = document.getElementById("logout-button");
+const addGameButton = document.getElementById("add-game-button");
+const adminNavLink = document.getElementById("admin-nav-link");
 
 
-let currentUser = null;
-let currentGames = [];
+async function loadDashboard() {
+    try {
+        const {
+            data: {
+                user
+            },
+            error: userError
+        } = await client.auth.getUser();
+
+        if (userError || !user) {
+            window.location.href = "login.html";
+            return;
+        }
 
 
-/* =========================================
-   CHECK SUPABASE
-========================================= */
+        const {
+            data: profile,
+            error: profileError
+        } = await client
+            .from("profiles")
+            .select(`
+                id,
+                username,
+                display_name,
+                is_admin,
+                is_suspended,
+                suspended_until,
+                created_at
+            `)
+            .eq("id", user.id)
+            .single();
 
-if (!supabaseClient) {
-    console.error(
-        "Supabase client is niet beschikbaar."
-    );
+
+        if (profileError) {
+            console.error("Profile error:", profileError);
+
+            accountInfo.innerHTML = `
+                <p>
+                    Could not load your account.
+                </p>
+            `;
+
+            return;
+        }
+
+
+        /*
+         * ------------------------------------------------
+         * ACCOUNT / SUSPENSION
+         * ------------------------------------------------
+         */
+
+        const isSuspended = profile.is_suspended === true;
+
+        if (isSuspended) {
+            welcomeTitle.textContent = "Account suspended.";
+
+            gamesList.innerHTML = `
+                <div class="build-card">
+                    <h3>
+                        Your account is suspended.
+                    </h3>
+
+                    <p>
+                        You currently cannot manage games or builds.
+                    </p>
+                </div>
+            `;
+
+            quickActions.innerHTML = `
+                <div class="build-card">
+                    <p>
+                        Account actions are unavailable while your account is suspended.
+                    </p>
+                </div>
+            `;
+
+            accountInfo.innerHTML = `
+                <h3>
+                    ${escapeHTML(
+                        profile.display_name ||
+                        profile.username ||
+                        "User"
+                    )}
+                </h3>
+
+                <p>
+                    Username:
+                    <strong>
+                        ${escapeHTML(profile.username)}
+                    </strong>
+                </p>
+
+                <p>
+                    Status:
+                    <strong>
+                        Suspended
+                    </strong>
+                </p>
+            `;
+
+            if (adminNavLink) {
+                adminNavLink.style.display = "none";
+            }
+
+            if (addGameButton) {
+                addGameButton.disabled = true;
+            }
+
+            return;
+        }
+
+
+        /*
+         * ------------------------------------------------
+         * WELCOME
+         * ------------------------------------------------
+         */
+
+        const displayName =
+            profile.display_name ||
+            profile.username ||
+            "User";
+
+        welcomeTitle.textContent =
+            `Welcome, ${displayName}.`;
+
+
+        /*
+         * ------------------------------------------------
+         * ADMIN NAVIGATION
+         * ------------------------------------------------
+         */
+
+        if (adminNavLink) {
+            if (profile.is_admin === true) {
+                adminNavLink.style.display = "inline-block";
+            } else {
+                adminNavLink.style.display = "none";
+            }
+        }
+
+
+        /*
+         * ------------------------------------------------
+         * LOAD GAMES
+         * ------------------------------------------------
+         */
+
+        const {
+            data: games,
+            error: gamesError
+        } = await client
+            .from("games")
+            .select(`
+                id,
+                name,
+                slug,
+                description,
+                created_at
+            `)
+            .eq("owner_id", user.id)
+            .order("created_at", {
+                ascending: false
+            });
+
+
+        if (gamesError) {
+            console.error("Games error:", gamesError);
+
+            gamesList.innerHTML = `
+                <div class="build-card">
+                    <p>
+                        Could not load your games.
+                    </p>
+                </div>
+            `;
+
+            return;
+        }
+
+
+        /*
+         * ------------------------------------------------
+         * LOAD BUILDS
+         * ------------------------------------------------
+         */
+
+        let builds = [];
+
+
+        if (games && games.length > 0) {
+            const gameIds = games.map(game => game.id);
+
+            const {
+                data: buildData,
+                error: buildsError
+            } = await client
+                .from("builds")
+                .select(`
+                    id,
+                    game_id,
+                    version,
+                    build_date,
+                    status,
+                    description,
+                    url,
+                    created_at
+                `)
+                .in("game_id", gameIds)
+                .order("created_at", {
+                    ascending: false
+                });
+
+
+            if (buildsError) {
+                console.error("Builds error:", buildsError);
+            } else {
+                builds = buildData || [];
+            }
+        }
+
+
+        /*
+         * ------------------------------------------------
+         * RENDER GAMES
+         * ------------------------------------------------
+         */
+
+        renderGames(games || [], builds);
+
+
+        /*
+         * ------------------------------------------------
+         * QUICK ACTIONS
+         * ------------------------------------------------
+         */
+
+        renderQuickActions(games || []);
+
+
+        /*
+         * ------------------------------------------------
+         * ACCOUNT
+         * ------------------------------------------------
+ */
+
+        renderAccount(profile, games || [], builds);
+    }
+
+    catch (error) {
+        console.error("Dashboard error:", error);
+
+        gamesList.innerHTML = `
+            <div class="build-card">
+                <p>
+                    Something went wrong while loading the dashboard.
+                </p>
+            </div>
+        `;
+    }
 }
 
 
-/* =========================================
-   LOAD DASHBOARD
-========================================= */
+/*
+ * ========================================================
+ * RENDER GAMES
+ * ========================================================
+ */
 
-async function loadDashboard() {
-
-    /*
-     * Check login.
-     */
-
-    const {
-        data: { user },
-        error: userError
-    } = await supabaseClient.auth.getUser();
-
-
-    if (
-        userError ||
-        !user
-    ) {
-
-        window.location.href =
-            "login.html";
-
-        return;
-    }
-
-
-    currentUser =
-        user;
-
-
-    /*
-     * Load profile.
-     */
-
-    const {
-        data: profile,
-        error: profileError
-    } = await supabaseClient
-        .from("profiles")
-        .select(`
-            username,
-            display_name,
-            is_admin,
-            is_suspended,
-            suspended_until
-        `)
-        .eq("id", user.id)
-        .single();
-
-
-    if (
-        profileError ||
-        !profile
-    ) {
-
-        gamesList.innerHTML =
-            "<p>Could not load your profile.</p>";
-
-        return;
-    }
-
-
-    /*
-     * Show Admin navigation
-     * only for administrators.
-     */
-
-    if (
-        adminNavLink
-    ) {
-
-        if (
-            profile.is_admin === true
-        ) {
-
-            adminNavLink.style.display =
-                "inline-block";
-
-        } else {
-
-            adminNavLink.style.display =
-                "none";
-        }
-    }
-
-
-    /*
-     * Check suspension.
-     */
-
-    if (
-        profile.is_suspended === true
-    ) {
-
-        welcomeTitle.textContent =
-            "Account suspended";
-
-
+function renderGames(games, builds) {
+    if (!games || games.length === 0) {
         gamesList.innerHTML = `
-
             <div class="build-card">
 
-                <h2>
-                    Account suspended
-                </h2>
+                <h3>
+                    No games yet.
+                </h3>
 
                 <p>
-                    Your account is currently suspended.
-                    Please contact the administrator.
+                    Create your first game to get started.
                 </p>
 
-            </div>
-
-        `;
-
-
-        if (quickActions) {
-            quickActions.innerHTML =
-                "";
-        }
-
-
-        if (accountInfo) {
-
-            accountInfo.innerHTML = `
-
-                <p>
-                    <strong>
-                        Username:
-                    </strong>
-
-                    ${escapeHTML(
-                        profile.username
-                    )}
-                </p>
-
-
-                <p>
-                    <strong>
-                        Status:
-                    </strong>
-
-                    SUSPENDED
-                </p>
-
-            `;
-        }
-
-
-        return;
-    }
-
-
-    /*
-     * Welcome message.
-     */
-
-    welcomeTitle.textContent =
-        `Welcome, ${
-            profile.display_name ||
-            profile.username
-        }.`;
-
-
-
-    /*
-     * Account information.
-     */
-
-    if (accountInfo) {
-
-        accountInfo.innerHTML = `
-
-            <p>
-
-                <strong>
-                    Username:
-                </strong>
-
-                ${escapeHTML(
-                    profile.username
-                )}
-
-            </p>
-
-
-            <p>
-
-                <strong>
-                    Display name:
-                </strong>
-
-                ${escapeHTML(
-                    profile.display_name ||
-                    profile.username
-                )}
-
-            </p>
-
-
-            <p>
-
-                <strong>
-                    Status:
-                </strong>
-
-                ACTIVE
-
-            </p>
-
-        `;
-    }
-
-
-    /*
-     * Load games.
-     */
-
-    const {
-        data: games,
-        error: gamesError
-    } = await supabaseClient
-        .from("games")
-        .select(`
-            id,
-            name,
-            slug,
-            description,
-            created_at
-        `)
-        .eq(
-            "owner_id",
-            user.id
-        )
-        .order(
-            "created_at",
-            {
-                ascending: false
-            }
-        );
-
-
-    if (gamesError) {
-
-        console.error(
-            "Games error:",
-            gamesError
-        );
-
-
-        gamesList.innerHTML =
-            "<p>Could not load your games.</p>";
-
-        return;
-    }
-
-
-    currentGames =
-        games || [];
-
-
-    /*
-     * No games.
-     */
-
-    if (
-        currentGames.length === 0
-    ) {
-
-        gamesList.innerHTML = `
-
-            <div class="build-card">
-
-                <h2>
-                    No games yet
-                </h2>
-
-                <p>
-                    You haven't added a game yet.
-                </p>
-
+                <br>
 
                 <button
                     class="btn primary"
                     onclick="window.location.href='add-game.html'"
                 >
-                    Add your first game
+                    Add game
                 </button>
 
             </div>
-
         `;
 
+        return;
+    }
 
-        if (quickActions) {
 
-            quickActions.innerHTML = `
+    gamesList.innerHTML = games.map(game => {
 
-                <div class="build-card">
+        const gameBuilds = builds.filter(
+            build => build.game_id === game.id
+        );
 
-                    <h2>
-                        Quick actions
-                    </h2>
 
-                    <p>
-                        Add a game first before creating builds.
-                    </p>
+        const latestBuild =
+            gameBuilds.length > 0
+                ? gameBuilds[0]
+                : null;
+
+
+        return `
+            <div class="build-card">
+
+                <span class="eyebrow">
+                    GAME
+                </span>
+
+                <h3>
+                    ${escapeHTML(game.name)}
+                </h3>
+
+                <p>
+                    ${escapeHTML(
+                        game.description ||
+                        "No description available."
+                    )}
+                </p>
+
+                <p>
+                    <strong>
+                        Slug:
+                    </strong>
+                    ${escapeHTML(game.slug)}
+                </p>
+
+                <p>
+                    <strong>
+                        Builds:
+                    </strong>
+                    ${gameBuilds.length}
+                </p>
+
+                ${
+                    latestBuild
+                        ? `
+                            <p>
+                                <strong>
+                                    Latest:
+                                </strong>
+                                ${escapeHTML(latestBuild.version)}
+                            </p>
+                        `
+                        : `
+                            <p>
+                                <strong>
+                                    Latest:
+                                </strong>
+                                No builds yet
+                            </p>
+                        `
+                }
+
+                <div class="hero-actions">
+
+                    <a
+                        href="game.html?slug=${encodeURIComponent(game.slug)}"
+                        class="btn secondary"
+                    >
+                        View game
+                    </a>
+
+                    <a
+                        href="manage-game.html?slug=${encodeURIComponent(game.slug)}"
+                        class="btn primary"
+                    >
+                        Manage game
+                    </a>
 
                 </div>
 
-            `;
-        }
-
-
-        return;
-    }
-
-
-    /*
-     * Load builds.
-     */
-
-    const gameIds =
-        currentGames.map(
-            game => game.id
-        );
-
-
-    const {
-        data: builds,
-        error: buildsError
-    } = await supabaseClient
-        .from("builds")
-        .select(`
-            id,
-            game_id,
-            version,
-            build_date,
-            status
-        `)
-        .in(
-            "game_id",
-            gameIds
-        );
-
-
-    if (buildsError) {
-
-        console.error(
-            "Builds error:",
-            buildsError
-        );
-
-
-        gamesList.innerHTML =
-            "<p>Could not load your builds.</p>";
-
-        return;
-    }
-
-
-    renderGames(
-        currentGames,
-        builds || []
-    );
-
-
-    renderQuickActions(
-        currentGames
-    );
+            </div>
+        `;
+    }).join("");
 }
 
 
-/* =========================================
-   RENDER GAMES
-========================================= */
+/*
+ * ========================================================
+ * QUICK ACTIONS
+ * ========================================================
+ */
 
-function renderGames(
-    games,
-    builds
-) {
-
-    gamesList.innerHTML =
-        games.map(
-            game => {
-
-                const gameBuilds =
-                    builds.filter(
-                        build =>
-                            build.game_id ===
-                            game.id
-                    );
-
-
-                const sortedBuilds =
-                    [...gameBuilds].sort(
-                        (a, b) =>
-                            new Date(
-                                b.build_date
-                            ) -
-                            new Date(
-                                a.build_date
-                            )
-                    );
-
-
-                const latestBuild =
-                    sortedBuilds[0];
-
-
-                return `
-
-                    <article class="build-card">
-
-                        <span class="eyebrow">
-                            GAME
-                        </span>
-
-
-                        <h2>
-                            ${escapeHTML(
-                                game.name
-                            )}
-                        </h2>
-
-
-                        <p>
-                            ${escapeHTML(
-                                game.description ||
-                                "No description."
-                            )}
-                        </p>
-
-
-                        <div class="game-card-info">
-
-                            <div>
-
-                                <span>
-                                    BUILDS
-                                </span>
-
-                                <strong>
-                                    ${gameBuilds.length}
-                                </strong>
-
-                            </div>
-
-
-                            <div>
-
-                                <span>
-                                    LATEST
-                                </span>
-
-                                <strong>
-
-                                    ${
-                                        latestBuild
-                                            ? escapeHTML(
-                                                latestBuild.version
-                                            )
-                                            : "—"
-                                    }
-
-                                </strong>
-
-                            </div>
-
-                        </div>
-
-
-                        <div
-                            style="
-                                display:flex;
-                                gap:10px;
-                                flex-wrap:wrap;
-                                margin-top:20px;
-                            "
-                        >
-
-                            <a
-                                href="game.html?slug=${encodeURIComponent(
-                                    game.slug
-                                )}"
-                                class="btn primary"
-                            >
-                                View game
-                            </a>
-
-
-                            <a
-                                href="manage-game.html?id=${encodeURIComponent(
-                                    game.id
-                                )}"
-                                class="btn"
-                            >
-                                Manage game
-                            </a>
-
-                        </div>
-
-                    </article>
-
-                `;
-            }
-        )
-        .join("");
-}
-
-
-/* =========================================
-   QUICK ACTIONS
-========================================= */
-
-function renderQuickActions(
-    games
-) {
+function renderQuickActions(games) {
 
     if (!quickActions) {
         return;
     }
 
 
-    const firstGame =
-        games[0];
-
-
-    quickActions.innerHTML = `
-
+    let html = `
         <div class="build-card">
 
-            <h2>
-                Add a build
-            </h2>
+            <h3>
+                Add a game
+            </h3>
 
             <p>
-                Upload a new build to one of your games.
+                Create a new game project.
             </p>
 
+            <br>
 
             <a
-                href="manage-game.html?id=${encodeURIComponent(
-                    firstGame.id
-                )}&action=add-build"
+                href="add-game.html"
                 class="btn primary"
             >
-                + Add build
+                Add game
             </a>
 
         </div>
+    `;
+
+
+    if (games.length > 0) {
+        const firstGame = games[0];
+
+        html += `
+            <div class="build-card">
+
+                <h3>
+                    Add a build
+                </h3>
+
+                <p>
+                    Upload a new build for
+                    ${escapeHTML(firstGame.name)}.
+                </p>
+
+                <br>
+
+                <a
+                    href="manage-game.html?slug=${encodeURIComponent(firstGame.slug)}"
+                    class="btn primary"
+                >
+                    Manage game
+                </a>
+
+            </div>
+        `;
+    }
+
+
+    quickActions.innerHTML = html;
+}
+
+
+/*
+ * ========================================================
+ * ACCOUNT
+ * ========================================================
+ */
+
+function renderAccount(profile, games, builds) {
+
+    if (!accountInfo) {
+        return;
+    }
+
+
+    const status =
+        profile.is_suspended === true
+            ? "Suspended"
+            : "Active";
+
+
+    const adminStatus =
+        profile.is_admin === true
+            ? "Administrator"
+            : "User";
+
+
+    accountInfo.innerHTML = `
+
+        <h3>
+            ${escapeHTML(
+                profile.display_name ||
+                profile.username ||
+                "User"
+            )}
+        </h3>
+
+        <p>
+            <strong>
+                Username:
+            </strong>
+
+            ${escapeHTML(profile.username)}
+        </p>
+
+        <p>
+            <strong>
+                Account type:
+            </strong>
+
+            ${adminStatus}
+        </p>
+
+        <p>
+            <strong>
+                Status:
+            </strong>
+
+            ${status}
+        </p>
+
+        <p>
+            <strong>
+                Games:
+            </strong>
+
+            ${games.length}
+        </p>
+
+        <p>
+            <strong>
+                Builds:
+            </strong>
+
+            ${builds.length}
+        </p>
 
     `;
 }
 
 
-/* =========================================
-   LOGOUT
-========================================= */
+/*
+ * ========================================================
+ * LOGOUT
+ * ========================================================
+ */
 
 if (logoutButton) {
 
@@ -617,21 +559,32 @@ if (logoutButton) {
         "click",
         async () => {
 
-            await supabaseClient
-                .auth
-                .signOut();
+            const {
+                error
+            } = await client.auth.signOut();
 
 
-            window.location.href =
-                "login.html";
+            if (error) {
+                console.error(
+                    "Logout error:",
+                    error
+                );
+
+                return;
+            }
+
+
+            window.location.href = "login.html";
         }
     );
 }
 
 
-/* =========================================
-   ADD GAME
-========================================= */
+/*
+ * ========================================================
+ * ADD GAME BUTTON
+ * ========================================================
+ */
 
 if (addGameButton) {
 
@@ -641,54 +594,38 @@ if (addGameButton) {
 
             window.location.href =
                 "add-game.html";
+
         }
     );
 }
 
 
-/* =========================================
-   SECURITY
-========================================= */
+/*
+ * ========================================================
+ * HTML ESCAPE
+ * ========================================================
+ */
 
-function escapeHTML(
-    value
-) {
+function escapeHTML(value) {
 
-    if (
-        value === undefined ||
-        value === null
-    ) {
+    if (value === null || value === undefined) {
         return "";
     }
 
 
     return String(value)
-        .replaceAll(
-            "&",
-            "&amp;"
-        )
-        .replaceAll(
-            "<",
-            "&lt;"
-        )
-        .replaceAll(
-            ">",
-            "&gt;"
-        )
-        .replaceAll(
-            '"',
-            "&quot;"
-        )
-        .replaceAll(
-            "'",
-            "&#039;"
-        );
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
 
 
-/* =========================================
-   START
-========================================= */
+/*
+ * ========================================================
+ * START DASHBOARD
+ * ========================================================
+ */
 
 loadDashboard();
-
