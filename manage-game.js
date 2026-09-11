@@ -1,5 +1,3 @@
-const supabaseClient = window.supabaseClient;
-
 let currentUser = null;
 let currentProfile = null;
 let currentGame = null;
