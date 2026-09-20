@@ -10,12 +10,26 @@ const supabaseClient = window.supabase.createClient(
 const gamesGrid = document.getElementById("games-grid");
 const adminGamesGrid = document.getElementById("admin-games-grid");
 const platformGameCount = document.getElementById("platform-game-count");
+const platformUserCount = document.getElementById("platform-user-count");
 const footerGameCount = document.getElementById("footer-game-count");
 
 async function loadHomepage() {
     try {
         /*
-         * 1. Haal alle games op
+         * 1. Haal het aantal geregistreerde ontwikkelaars/gebruikers op uit profiles
+         */
+        const { count: userCount, error: userError } = await supabaseClient
+            .from("profiles")
+            .select("*", { count: "exact", head: true });
+
+        if (!userError && platformUserCount) {
+            platformUserCount.textContent = userCount ?? 0;
+        } else if (platformUserCount) {
+            platformUserCount.textContent = "—";
+        }
+
+        /*
+         * 2. Haal alle games op
          */
         let { data: games, error: gamesError } = await supabaseClient
             .from("games")
@@ -53,19 +67,18 @@ async function loadHomepage() {
             return;
         }
 
-        // Tellers bijwerken
+        // Game tellers bijwerken
         if (platformGameCount) platformGameCount.textContent = games.length;
         if (footerGameCount) footerGameCount.textContent = `${games.length} ${games.length === 1 ? 'GAME' : 'GAMES'}`;
 
         /*
-         * 2. ADMIN / LUCAS GAMES SPOTLIGHT
+         * 3. ADMIN GAMES SPOTLIGHT
          */
         if (adminGamesGrid) {
-            // Zoekt naar games die van de admin zijn (of simpelweg de allereerste game als fallback)
             const myGames = games.filter(g => {
                 const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
-                const username = (profile?.username || profile?.display_name || "").toLowerCase();
-                return username.includes("lucas") || username.includes("admin") || g.slug === "pancakeria";
+                const username = (profile?.username || "").toLowerCase();
+                return username.includes("admin") || g.slug === "pancakeria";
             });
 
             const displayAdminGames = myGames.length > 0 ? myGames : [games[0]];
@@ -87,19 +100,20 @@ async function loadHomepage() {
         }
 
         /*
-         * 3. ALL COMMUNITY GAMES GRID
+         * 4. COMMUNITY GAMES GRID
          */
         if (gamesGrid) {
             const featuredGames = games.slice(0, 6);
 
             gamesGrid.innerHTML = featuredGames.map(game => {
                 const profile = Array.isArray(game.profiles) ? game.profiles[0] : game.profiles;
-                const authorName = profile?.display_name || profile?.username || "Developer";
+                // Pakt nu altijd direct de unieke username
+                const username = profile?.username || "developer";
 
                 return `
                     <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
                         <div>
-                            <span class="section-label">BY ${escapeHTML(authorName).toUpperCase()}</span>
+                            <span class="section-label">BY ${escapeHTML(username).toUpperCase()}</span>
                             <h3 style="font-size: 20px; margin-top: 5px; margin-bottom: 10px;">${escapeHTML(game.name)}</h3>
                             <p style="color: #aaa; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
                                 ${escapeHTML(game.description || "No description provided.")}
