@@ -54,15 +54,31 @@ uploadModeRadios.forEach(radio => {
 buildTypeRadios.forEach(radio => {
     radio.addEventListener("change", (e) => {
         if (!unityBuildInput) return;
+        const uploadMode = (document.querySelector('input[name="upload-mode"]:checked') || {}).value || "auto";
+
         if (e.target.value === "executable") {
             unityBuildInput.removeAttribute("webkitdirectory");
             unityBuildInput.removeAttribute("directory");
             unityBuildInput.setAttribute("accept", ".zip,.exe,.rar,.7z");
+            
+            if (uploadMode === "auto") {
+                unityBuildInput.setAttribute("required", "true");
+            } else {
+                unityBuildInput.removeAttribute("required");
+            }
+
             if (selectedFilesText) selectedFilesText.textContent = "Selecteer je .zip of .exe bestand.";
         } else {
             unityBuildInput.setAttribute("webkitdirectory", "");
             unityBuildInput.setAttribute("directory", "");
             unityBuildInput.removeAttribute("accept");
+
+            if (uploadMode === "auto") {
+                unityBuildInput.setAttribute("required", "true");
+            } else {
+                unityBuildInput.removeAttribute("required");
+            }
+
             if (selectedFilesText) selectedFilesText.textContent = "Selecteer de WebGL build map.";
         }
     });
@@ -322,36 +338,46 @@ addBuildForm.addEventListener("submit", async event => {
         let downloadUrl = null;
 
         if (buildType === "executable") {
-            const files = Array.from(unityBuildInput.files || []);
-            if (files.length === 0) {
-                formMessage.textContent = "Please select a .zip or .exe file.";
-                return;
-            }
-
-            const exeFile = files[0];
-            formMessage.textContent = `Uploading executable build (${formatBytes(exeFile.size)})...`;
-
-            const arrayBuffer = await exeFile.arrayBuffer();
-            const base64 = arrayBufferToBase64(arrayBuffer);
-
-            const { data: exeUploadData, error: exeUploadError } = await supabaseClient.functions.invoke(
-                "upload-executable-build",
-                {
-                    body: {
-                        gameSlug: currentGame.slug,
-                        version: version,
-                        fileName: exeFile.name,
-                        contentBase64: base64
-                    }
+            if (uploadMode === "auto") {
+                const files = Array.from(unityBuildInput.files || []);
+                if (files.length === 0) {
+                    formMessage.textContent = "Please select a .zip or .exe file.";
+                    return;
                 }
-            );
 
-            if (exeUploadError || !exeUploadData?.success) {
-                throw new Error(exeUploadError?.message || exeUploadData?.error || "Executable upload failed.");
+                const exeFile = files[0];
+                formMessage.textContent = `Uploading executable build (${formatBytes(exeFile.size)})...`;
+
+                const arrayBuffer = await exeFile.arrayBuffer();
+                const base64 = arrayBufferToBase64(arrayBuffer);
+
+                const { data: exeUploadData, error: exeUploadError } = await supabaseClient.functions.invoke(
+                    "upload-executable-build",
+                    {
+                        body: {
+                            gameSlug: currentGame.slug,
+                            version: version,
+                            fileName: exeFile.name,
+                            contentBase64: base64
+                        }
+                    }
+                );
+
+                if (exeUploadError || !exeUploadData?.success) {
+                    throw new Error(exeUploadError?.message || exeUploadData?.error || "Executable upload failed.");
+                }
+
+                downloadUrl = exeUploadData.downloadUrl;
+                buildUrl = exeUploadData.downloadUrl;
+
+            } else {
+                // Manual Upload voor Executable: Geen browserbestand nodig
+                formMessage.textContent = "Registering manual executable build...";
+                
+                // Link naar de GitHub Pages downloads map voor deze specifieke build
+                downloadUrl = `https://597405.github.io/GameBuildFilesUnityWeb/${currentGame.slug}/${version}/downloads/`;
+                buildUrl = downloadUrl;
             }
-
-            downloadUrl = exeUploadData.downloadUrl;
-            buildUrl = exeUploadData.downloadUrl;
 
         } else {
             // WebGL Build Flow
