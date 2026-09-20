@@ -1231,3 +1231,23 @@ footer {
     }
 
 }
+
+/* STAR RATING STYLING */
+#star-rating span {
+    font-size: 32px;
+    cursor: pointer;
+    color: #444;
+    transition: color 0.15s ease, transform 0.15s ease;
+    display: inline-block;
+    user-select: none;
+}
+
+#star-rating span:hover {
+    transform: scale(1.2);
+    color: #00e5a0;
+}
+
+#star-rating span.active {
+    color: #00e5a0;
+    text-shadow: 0 0 10px rgba(0, 229, 160, 0.4);
+}

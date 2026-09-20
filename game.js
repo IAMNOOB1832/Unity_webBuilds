@@ -229,17 +229,29 @@ if (starRatingContainer) {
     const stars = starRatingContainer.querySelectorAll("span");
 
     stars.forEach((star) => {
-        star.addEventListener("click", () => {
+        star.addEventListener("click", (e) => {
+            e.preventDefault();
             const val = parseInt(star.dataset.value);
+            
+            // Als je nogmaals op dezelfde ster klikt, reset naar 0
             currentSelectedRating = currentSelectedRating === val ? 0 : val;
 
             selectedRatingInput.value = currentSelectedRating;
-            ratingText.textContent = `${currentSelectedRating} / 5 stars selected`;
+            
+            if (ratingText) {
+                ratingText.textContent = `${currentSelectedRating} / 5 stars selected`;
+            }
 
+            // Kleur en vul de sterren in
             stars.forEach((s) => {
                 const sVal = parseInt(s.dataset.value);
-                s.textContent = sVal <= currentSelectedRating ? "★" : "☆";
-                s.style.color = sVal <= currentSelectedRating ? "#00e5a0" : "#fff";
+                if (sVal <= currentSelectedRating) {
+                    s.textContent = "★";
+                    s.classList.add("active");
+                } else {
+                    s.textContent = "☆";
+                    s.classList.remove("active");
+                }
             });
         });
     });
