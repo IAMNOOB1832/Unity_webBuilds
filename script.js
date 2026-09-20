@@ -14,14 +14,17 @@ const footerGameCount = document.getElementById("footer-game-count");
 
 async function loadHomepage() {
     try {
-        // Haal alle games op inclusief de eigenaar profielen
-        const { data: games, error } = await supabaseClient
+        /*
+         * 1. Haal alle games op
+         */
+        let { data: games, error: gamesError } = await supabaseClient
             .from("games")
             .select(`
                 id,
                 name,
                 slug,
                 description,
+                owner_id,
                 created_at,
                 profiles (
                     username,
@@ -30,7 +33,17 @@ async function loadHomepage() {
             `)
             .order("created_at", { ascending: false });
 
-        if (error) throw error;
+        // Fallback als de join met profiles mislukt
+        if (gamesError) {
+            console.warn("Directe join met profiles mislukt, valt terug op losse games query:", gamesError);
+            const fallbackResult = await supabaseClient
+                .from("games")
+                .select("id, name, slug, description, owner_id, created_at")
+                .order("created_at", { ascending: false });
+
+            if (fallbackResult.error) throw fallbackResult.error;
+            games = fallbackResult.data;
+        }
 
         if (!games || games.length === 0) {
             if (gamesGrid) gamesGrid.innerHTML = "<p style='color:#888;'>No games published yet. Be the first to upload one!</p>";
@@ -44,59 +57,44 @@ async function loadHomepage() {
         if (platformGameCount) platformGameCount.textContent = games.length;
         if (footerGameCount) footerGameCount.textContent = `${games.length} ${games.length === 1 ? 'GAME' : 'GAMES'}`;
 
-        /* =========================================
-           1. ADMIN / LUCAS GAMES SPOTLIGHT
-        ========================================= */
+        /*
+         * 2. ADMIN / LUCAS GAMES SPOTLIGHT
+         */
         if (adminGamesGrid) {
-            // Zoekt op profielen waar de naam 'lucas' of 'admin' in voorkomt
+            // Zoekt naar games die van de admin zijn (of simpelweg de allereerste game als fallback)
             const myGames = games.filter(g => {
-                const username = (g.profiles?.username || g.profiles?.display_name || "").toLowerCase();
-                return username.includes("lucas") || username.includes("admin");
+                const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
+                const username = (profile?.username || profile?.display_name || "").toLowerCase();
+                return username.includes("lucas") || username.includes("admin") || g.slug === "pancakeria";
             });
 
-            if (myGames.length > 0) {
-                adminGamesGrid.innerHTML = myGames.map(game => `
-                    <div class="latest-card" style="padding: 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0, 229, 160, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
-                        <div>
-                            <span class="section-label" style="color: #00e5a0;">ADMIN PROJECT</span>
-                            <h4 style="font-size: 18px; margin: 6px 0 10px 0; color: #fff;">${escapeHTML(game.name)}</h4>
-                            <p style="color: #aaa; font-size: 13px; margin-bottom: 15px; line-height: 1.4;">
-                                ${escapeHTML(game.description || "No description provided.")}
-                            </p>
-                        </div>
-                        <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="padding: 8px 12px; font-size: 13px; text-align: center; justify-content: center;">
-                            PLAY MY GAME <span>→</span>
-                        </a>
+            const displayAdminGames = myGames.length > 0 ? myGames : [games[0]];
+
+            adminGamesGrid.innerHTML = displayAdminGames.map(game => `
+                <div class="latest-card" style="padding: 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0, 229, 160, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
+                    <div>
+                        <span class="section-label" style="color: #00e5a0;">ADMIN PROJECT</span>
+                        <h4 style="font-size: 18px; margin: 6px 0 10px 0; color: #fff;">${escapeHTML(game.name)}</h4>
+                        <p style="color: #aaa; font-size: 13px; margin-bottom: 15px; line-height: 1.4;">
+                            ${escapeHTML(game.description || "No description provided.")}
+                        </p>
                     </div>
-                `).join("");
-            } else {
-                // Fallback: Als er nog geen match is, toont hij gewoon de allereerste game
-                const firstGame = games[0];
-                adminGamesGrid.innerHTML = `
-                    <div class="latest-card" style="padding: 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0, 229, 160, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
-                        <div>
-                            <span class="section-label" style="color: #00e5a0;">ADMIN PROJECT</span>
-                            <h4 style="font-size: 18px; margin: 6px 0 10px 0; color: #fff;">${escapeHTML(firstGame.name)}</h4>
-                            <p style="color: #aaa; font-size: 13px; margin-bottom: 15px; line-height: 1.4;">
-                                ${escapeHTML(firstGame.description || "No description provided.")}
-                            </p>
-                        </div>
-                        <a href="game.html?slug=${escapeAttribute(firstGame.slug)}" class="button button-primary" style="padding: 8px 12px; font-size: 13px; text-align: center; justify-content: center;">
-                            PLAY GAME <span>→</span>
-                        </a>
-                    </div>
-                `;
-            }
+                    <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="padding: 8px 12px; font-size: 13px; text-align: center; justify-content: center;">
+                        PLAY GAME <span>→</span>
+                    </a>
+                </div>
+            `).join("");
         }
 
-        /* =========================================
-           2. COMMUNITY GAMES GRID
-        ========================================= */
+        /*
+         * 3. ALL COMMUNITY GAMES GRID
+         */
         if (gamesGrid) {
             const featuredGames = games.slice(0, 6);
 
             gamesGrid.innerHTML = featuredGames.map(game => {
-                const authorName = game.profiles?.display_name || game.profiles?.username || "Unknown Developer";
+                const profile = Array.isArray(game.profiles) ? game.profiles[0] : game.profiles;
+                const authorName = profile?.display_name || profile?.username || "Developer";
 
                 return `
                     <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
@@ -117,7 +115,7 @@ async function loadHomepage() {
 
     } catch (error) {
         console.error("Error loading homepage:", error);
-        if (gamesGrid) gamesGrid.innerHTML = "<p style='color:#ff4d4d;'>Could not load featured games.</p>";
+        if (gamesGrid) gamesGrid.innerHTML = `<p style='color:#ff4d4d;'>Could not load games: ${escapeHTML(error.message || "Unknown error")}</p>`;
     }
 }
 
