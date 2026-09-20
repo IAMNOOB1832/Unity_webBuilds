@@ -16,7 +16,7 @@ const footerGameCount = document.getElementById("footer-game-count");
 async function loadHomepage() {
     try {
         /*
-         * 1. Haal het aantal geregistreerde ontwikkelaars/gebruikers op uit profiles
+         * 1. Aantal geregistreerde ontwikkelaars
          */
         const { count: userCount, error: userError } = await supabaseClient
             .from("profiles")
@@ -31,33 +31,12 @@ async function loadHomepage() {
         /*
          * 2. Haal alle games op
          */
-        let { data: games, error: gamesError } = await supabaseClient
+        const { data: games, error: gamesError } = await supabaseClient
             .from("games")
-            .select(`
-                id,
-                name,
-                slug,
-                description,
-                owner_id,
-                created_at,
-                profiles (
-                    username,
-                    display_name
-                )
-            `)
+            .select("id, name, slug, description, owner_id, created_at")
             .order("created_at", { ascending: false });
 
-        // Fallback als de join met profiles mislukt
-        if (gamesError) {
-            console.warn("Directe join met profiles mislukt, valt terug op losse games query:", gamesError);
-            const fallbackResult = await supabaseClient
-                .from("games")
-                .select("id, name, slug, description, owner_id, created_at")
-                .order("created_at", { ascending: false });
-
-            if (fallbackResult.error) throw fallbackResult.error;
-            games = fallbackResult.data;
-        }
+        if (gamesError) throw gamesError;
 
         if (!games || games.length === 0) {
             if (gamesGrid) gamesGrid.innerHTML = "<p style='color:#888;'>No games published yet. Be the first to upload one!</p>";
@@ -67,21 +46,45 @@ async function loadHomepage() {
             return;
         }
 
-        // Game tellers bijwerken
-        if (platformGameCount) platformGameCount.textContent = games.length;
-        if (footerGameCount) footerGameCount.textContent = `${games.length} ${games.length === 1 ? 'GAME' : 'GAMES'}`;
+        /*
+         * 3. Haal de bijbehorende profielen op
+         */
+        const ownerIds = [...new Set(games.map(g => g.owner_id).filter(Boolean))];
+        let profilesMap = {};
+
+        if (ownerIds.length > 0) {
+            const { data: profiles, error: profilesError } = await supabaseClient
+                .from("profiles")
+                .select("id, username, display_name")
+                .in("id", ownerIds);
+
+            if (!profilesError && profiles) {
+                profiles.forEach(p => {
+                    profilesMap[p.id] = p;
+                });
+            }
+        }
+
+        // Koppel profielen direct aan de games
+        const gamesWithProfiles = games.map(game => ({
+            ...game,
+            authorName: profilesMap[game.owner_id]?.username || profilesMap[game.owner_id]?.display_name || "DEVELOPER"
+        }));
+
+        // Tellers bijwerken
+        if (platformGameCount) platformGameCount.textContent = gamesWithProfiles.length;
+        if (footerGameCount) footerGameCount.textContent = `${gamesWithProfiles.length} ${gamesWithProfiles.length === 1 ? 'GAME' : 'GAMES'}`;
 
         /*
-         * 3. ADMIN GAMES SPOTLIGHT
+         * 4. ADMIN GAMES SPOTLIGHT
          */
         if (adminGamesGrid) {
-            const myGames = games.filter(g => {
-                const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
-                const username = (profile?.username || "").toLowerCase();
-                return username.includes("admin") || g.slug === "pancakeria";
+            const myGames = gamesWithProfiles.filter(g => {
+                const name = g.authorName.toLowerCase();
+                return name.includes("admin") || g.slug === "pancakeria";
             });
 
-            const displayAdminGames = myGames.length > 0 ? myGames : [games[0]];
+            const displayAdminGames = myGames.length > 0 ? myGames : [gamesWithProfiles[0]];
 
             adminGamesGrid.innerHTML = displayAdminGames.map(game => `
                 <div class="latest-card" style="padding: 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0, 229, 160, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
@@ -100,33 +103,26 @@ async function loadHomepage() {
         }
 
         /*
-         * 4. COMMUNITY GAMES GRID
+         * 5. COMMUNITY GAMES GRID
          */
-    if (gamesGrid) {
-                const featuredGames = games.slice(0, 6);
+        if (gamesGrid) {
+            const featuredGames = gamesWithProfiles.slice(0, 6);
 
-                gamesGrid.innerHTML = featuredGames.map(game => {
-                    const profile = Array.isArray(game.profiles) ? game.profiles[0] : game.profiles;
-                    
-                    // Pakt eerst de unieke username, anders display_name, anders fallback
-                    const authorName = profile?.username || profile?.display_name || "COMMUNITY DEV";
-
-                    return `
-                        <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                            <div>
-                                <span class="section-label">BY ${escapeHTML(authorName).toUpperCase()}</span>
-                                <h3 style="font-size: 20px; margin-top: 5px; margin-bottom: 10px;">${escapeHTML(game.name)}</h3>
-                                <p style="color: #aaa; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
-                                    ${escapeHTML(game.description || "No description provided.")}
-                                </p>
-                            </div>
-                            <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="text-align: center; justify-content: center;">
-                                VIEW GAME <span>→</span>
-                            </a>
-                        </div>
-                    `;
-                }).join("");
-            }
+            gamesGrid.innerHTML = featuredGames.map(game => `
+                <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                    <div>
+                        <span class="section-label">BY ${escapeHTML(game.authorName).toUpperCase()}</span>
+                        <h3 style="font-size: 20px; margin-top: 5px; margin-bottom: 10px;">${escapeHTML(game.name)}</h3>
+                        <p style="color: #aaa; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
+                            ${escapeHTML(game.description || "No description provided.")}
+                        </p>
+                    </div>
+                    <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="text-align: center; justify-content: center;">
+                        VIEW GAME <span>→</span>
+                    </a>
+                </div>
+            `).join("");
+        }
 
     } catch (error) {
         console.error("Error loading homepage:", error);
