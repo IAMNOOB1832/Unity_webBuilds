@@ -332,7 +332,7 @@ addBuildForm.addEventListener("submit", async event => {
         let downloadUrl = null;
 
         if (uploadMode === "manual") {
-            // Manual Upload Flow (zoekt automatisch index.html of .zip op GitHub)
+            // Manual Upload Flow
             formMessage.textContent = "Verifying manual upload on GitHub...";
 
             const { data: verifyData, error: verifyError } = await supabaseClient.functions.invoke("verify-github-build", {
@@ -347,6 +347,7 @@ addBuildForm.addEventListener("submit", async event => {
                 throw new Error(verifyError?.message || verifyData?.error || "GitHub verification failed.");
             }
 
+            // Gebruik exact de URL die de Edge Function heeft gevonden (inclusief exacte zip-bestandsnaam)
             buildUrl = verifyData.buildUrl;
             if (buildType === "executable") {
                 downloadUrl = verifyData.buildUrl;
