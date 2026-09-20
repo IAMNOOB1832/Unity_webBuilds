@@ -25,6 +25,7 @@ const autoUploadBox = document.getElementById("auto-upload-box");
 const manualUploadBox = document.getElementById("manual-upload-box");
 const manualSlugHint = document.getElementById("manual-slug-hint");
 const manualVersionHint = document.getElementById("manual-version-hint");
+const uploadInstructionText = document.getElementById("upload-instruction-text");
 const versionInput = document.getElementById("version");
 
 const params = new URLSearchParams(window.location.search);
@@ -37,52 +38,45 @@ let currentGame = null;
    UPLOAD MODE & TYPE TOGGLES
 ========================= */
 
-uploadModeRadios.forEach(radio => {
-    radio.addEventListener("change", (e) => {
-        if (e.target.value === "manual") {
-            if (autoUploadBox) autoUploadBox.style.display = "none";
-            if (manualUploadBox) manualUploadBox.style.display = "block";
-            if (unityBuildInput) unityBuildInput.removeAttribute("required");
-        } else {
-            if (autoUploadBox) autoUploadBox.style.display = "block";
-            if (manualUploadBox) manualUploadBox.style.display = "none";
-            if (unityBuildInput) unityBuildInput.setAttribute("required", "true");
-        }
-    });
-});
+function updateFormInputsState() {
+    const uploadMode = (document.querySelector('input[name="upload-mode"]:checked') || {}).value || "auto";
+    const buildType = (document.querySelector('input[name="build-type"]:checked') || {}).value || "web";
 
-buildTypeRadios.forEach(radio => {
-    radio.addEventListener("change", (e) => {
-        if (!unityBuildInput) return;
-        const uploadMode = (document.querySelector('input[name="upload-mode"]:checked') || {}).value || "auto";
+    if (uploadMode === "manual") {
+        if (autoUploadBox) autoUploadBox.style.display = "none";
+        if (manualUploadBox) manualUploadBox.style.display = "block";
+        if (unityBuildInput) unityBuildInput.removeAttribute("required");
+    } else {
+        if (autoUploadBox) autoUploadBox.style.display = "block";
+        if (manualUploadBox) manualUploadBox.style.display = "none";
+        if (unityBuildInput) unityBuildInput.setAttribute("required", "true");
+    }
 
-        if (e.target.value === "executable") {
+    if (buildType === "executable") {
+        if (unityBuildInput) {
             unityBuildInput.removeAttribute("webkitdirectory");
             unityBuildInput.removeAttribute("directory");
             unityBuildInput.setAttribute("accept", ".zip,.exe,.rar,.7z");
-            
-            if (uploadMode === "auto") {
-                unityBuildInput.setAttribute("required", "true");
-            } else {
-                unityBuildInput.removeAttribute("required");
-            }
-
-            if (selectedFilesText) selectedFilesText.textContent = "Selecteer je .zip of .exe bestand.";
-        } else {
+        }
+        if (uploadInstructionText) uploadInstructionText.textContent = "Select your .zip or .exe build file.";
+        if (selectedFilesText && (!unityBuildInput || !unityBuildInput.files.length)) {
+            selectedFilesText.textContent = "No .zip / .exe selected.";
+        }
+    } else {
+        if (unityBuildInput) {
             unityBuildInput.setAttribute("webkitdirectory", "");
             unityBuildInput.setAttribute("directory", "");
             unityBuildInput.removeAttribute("accept");
-
-            if (uploadMode === "auto") {
-                unityBuildInput.setAttribute("required", "true");
-            } else {
-                unityBuildInput.removeAttribute("required");
-            }
-
-            if (selectedFilesText) selectedFilesText.textContent = "Selecteer de WebGL build map.";
         }
-    });
-});
+        if (uploadInstructionText) uploadInstructionText.textContent = "Select the complete WebGL build folder.";
+        if (selectedFilesText && (!unityBuildInput || !unityBuildInput.files.length)) {
+            selectedFilesText.textContent = "No WebGL folder selected.";
+        }
+    }
+}
+
+uploadModeRadios.forEach(radio => radio.addEventListener("change", updateFormInputsState));
+buildTypeRadios.forEach(radio => radio.addEventListener("change", updateFormInputsState));
 
 if (versionInput) {
     versionInput.addEventListener("input", (e) => {
@@ -337,8 +331,30 @@ addBuildForm.addEventListener("submit", async event => {
         let buildUrl = "";
         let downloadUrl = null;
 
-        if (buildType === "executable") {
-            if (uploadMode === "auto") {
+        if (uploadMode === "manual") {
+            // Manual Upload Flow (zoekt automatisch index.html of .zip op GitHub)
+            formMessage.textContent = "Verifying manual upload on GitHub...";
+
+            const { data: verifyData, error: verifyError } = await supabaseClient.functions.invoke("verify-github-build", {
+                body: { 
+                    gameSlug: currentGame.slug, 
+                    version: version,
+                    buildType: buildType
+                }
+            });
+
+            if (verifyError || !verifyData?.success) {
+                throw new Error(verifyError?.message || verifyData?.error || "GitHub verification failed.");
+            }
+
+            buildUrl = verifyData.buildUrl;
+            if (buildType === "executable") {
+                downloadUrl = verifyData.buildUrl;
+            }
+
+        } else {
+            // Auto Upload Flow
+            if (buildType === "executable") {
                 const files = Array.from(unityBuildInput.files || []);
                 if (files.length === 0) {
                     formMessage.textContent = "Please select a .zip or .exe file.";
@@ -371,17 +387,7 @@ addBuildForm.addEventListener("submit", async event => {
                 buildUrl = exeUploadData.downloadUrl;
 
             } else {
-                // Manual Upload voor Executable: Geen browserbestand nodig
-                formMessage.textContent = "Registering manual executable build...";
-                
-                // Link naar de GitHub Pages downloads map voor deze specifieke build
-                downloadUrl = `https://597405.github.io/GameBuildFilesUnityWeb/${currentGame.slug}/${version}/downloads/`;
-                buildUrl = downloadUrl;
-            }
-
-        } else {
-            // WebGL Build Flow
-            if (uploadMode === "auto") {
+                // WebGL Auto Upload
                 const files = Array.from(unityBuildInput.files || []);
                 if (files.length === 0) {
                     formMessage.textContent = "Please select your WebGL build folder.";
@@ -454,18 +460,6 @@ addBuildForm.addEventListener("submit", async event => {
                 }
 
                 buildUrl = commitData.url;
-
-            } else {
-                formMessage.textContent = "Verifying manual upload on GitHub...";
-                const { data: verifyData, error: verifyError } = await supabaseClient.functions.invoke("verify-github-build", {
-                    body: { gameSlug: currentGame.slug, version: version }
-                });
-
-                if (verifyError || !verifyData?.success) {
-                    throw new Error(verifyError?.message || verifyData?.error || "GitHub verification failed.");
-                }
-
-                buildUrl = verifyData.buildUrl;
             }
         }
 
