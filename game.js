@@ -221,7 +221,26 @@ let currentUserId = null;
 
 async function initFeedbackUser() {
     const { data: { user } } = await supabaseClient.auth.getUser();
-    if (user) currentUserId = user.id;
+    if (user) {
+        currentUserId = user.id;
+    } else {
+        currentUserId = null;
+    }
+    updateFeedbackFormVisibility();
+}
+
+/* Verberg het formulier als de gebruiker NIET is ingelogd */
+function updateFeedbackFormVisibility() {
+    if (!feedbackForm) return;
+
+    if (!currentUserId) {
+        feedbackForm.innerHTML = `
+            <div style="text-align: center; padding: 20px; background: rgba(255, 255, 255, 0.02); border: 1px dashed #444; border-radius: 6px;">
+                <p style="color: #aaa; margin-bottom: 12px;">You must be logged in to leave a review.</p>
+                <a href="login.html" class="button button-primary" style="display: inline-block;">LOG IN TO REVIEW</a>
+            </div>
+        `;
+    }
 }
 
 /* 1. STERREN INTERACTIE */
@@ -232,17 +251,11 @@ if (starRatingContainer) {
         star.addEventListener("click", (e) => {
             e.preventDefault();
             const val = parseInt(star.dataset.value);
-            
-            // Als je nogmaals op dezelfde ster klikt, reset naar 0
             currentSelectedRating = currentSelectedRating === val ? 0 : val;
 
-            selectedRatingInput.value = currentSelectedRating;
-            
-            if (ratingText) {
-                ratingText.textContent = `${currentSelectedRating} / 5 stars selected`;
-            }
+            if (selectedRatingInput) selectedRatingInput.value = currentSelectedRating;
+            if (ratingText) ratingText.textContent = `${currentSelectedRating} / 5 stars selected`;
 
-            // Kleur en vul de sterren in
             stars.forEach((s) => {
                 const sVal = parseInt(s.dataset.value);
                 if (sVal <= currentSelectedRating) {
@@ -263,6 +276,7 @@ async function loadGameFeedback(gameId) {
 
     await initFeedbackUser();
 
+    // Veilige query met optionele fallback als profiel niet direct matcht
     const { data: feedbackData, error } = await supabaseClient
         .from("game_feedback")
         .select(`
@@ -280,8 +294,8 @@ async function loadGameFeedback(gameId) {
         .order("created_at", { ascending: false });
 
     if (error) {
-        console.error("Fout bij ophalen feedback:", error);
-        feedbackList.innerHTML = "<p>Could not load reviews.</p>";
+        console.error("Error loading feedback:", error);
+        feedbackList.innerHTML = "<p style='color:#ff4d4d;'>Could not load reviews. Check console for details.</p>";
         return;
     }
 
@@ -302,7 +316,10 @@ async function loadGameFeedback(gameId) {
     }
 
     feedbackList.innerHTML = feedbackData.map(item => {
-        const authorName = item.profiles?.display_name || item.profiles?.username || "Anonymous player";
+        // Veilig afhandelen van gebruikersnaam
+        const profile = Array.isArray(item.profiles) ? item.profiles[0] : item.profiles;
+        const authorName = profile?.display_name || profile?.username || "Registered Player";
+        
         const starsText = "★".repeat(item.rating) + "☆".repeat(5 - item.rating);
         const dateStr = new Date(item.created_at).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
         const isOwner = currentUserId && item.user_id === currentUserId;
@@ -364,6 +381,12 @@ if (feedbackForm) {
         try {
             feedbackMessage.textContent = "Submitting review...";
 
+            const { data: { user } } = await supabaseClient.auth.getUser();
+
+            if (!user) {
+                throw new Error("You must be logged in to leave a review.");
+            }
+
             const { data: gameData, error: gameError } = await supabaseClient
                 .from("games")
                 .select("id")
@@ -372,14 +395,14 @@ if (feedbackForm) {
 
             if (gameError || !gameData) throw new Error("Game not found.");
 
-            const { data: { user } } = await supabaseClient.auth.getUser();
-            const comment = document.getElementById("feedback-comment").value.trim();
+            const commentInput = document.getElementById("feedback-comment");
+            const comment = commentInput ? commentInput.value.trim() : null;
 
             const { error: insertError } = await supabaseClient
                 .from("game_feedback")
                 .insert({
                     game_id: gameData.id,
-                    user_id: user ? user.id : null,
+                    user_id: user.id,
                     rating: currentSelectedRating,
                     comment: comment || null
                 });
@@ -388,15 +411,19 @@ if (feedbackForm) {
 
             feedbackMessage.style.color = "#00e5a0";
             feedbackMessage.textContent = "Thank you for your review!";
-            feedbackForm.reset();
+            
+            if (commentInput) commentInput.value = "";
 
             currentSelectedRating = 0;
-            selectedRatingInput.value = 0;
-            ratingText.textContent = "0 / 5 stars selected";
-            starRatingContainer.querySelectorAll("span").forEach(s => {
-                s.textContent = "☆";
-                s.style.color = "#fff";
-            });
+            if (selectedRatingInput) selectedRatingInput.value = 0;
+            if (ratingText) ratingText.textContent = "0 / 5 stars selected";
+            
+            if (starRatingContainer) {
+                starRatingContainer.querySelectorAll("span").forEach(s => {
+                    s.textContent = "☆";
+                    s.classList.remove("active");
+                });
+            }
 
             await loadGameFeedback(gameData.id);
 
