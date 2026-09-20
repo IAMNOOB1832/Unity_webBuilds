@@ -187,12 +187,38 @@
                 ></textarea>
 
 
-                <!-- UNITY BUILD & UPLOAD METHOD -->
+                <!-- BUILD TYPE SELECTION -->
 
                 <div style="margin-top:30px;">
 
                     <span class="eyebrow">
-                        UNITY WEBGL
+                        PLATFORM
+                    </span>
+
+                    <h2>
+                        Build type
+                    </h2>
+
+                    <div style="display: flex; gap: 20px; margin-top: 15px; margin-bottom: 20px;">
+                        <label style="cursor: pointer;">
+                            <input type="radio" name="build-type" value="web" checked>
+                            WebGL Build (Playable in browser)
+                        </label>
+                        <label style="cursor: pointer;">
+                            <input type="radio" name="build-type" value="executable">
+                            Desktop Build (.zip / .exe)
+                        </label>
+                    </div>
+
+                </div>
+
+
+                <!-- UNITY / FILE UPLOAD METHOD -->
+
+                <div style="margin-top:20px;">
+
+                    <span class="eyebrow">
+                        FILES & UPLOAD
                     </span>
 
                     <h2>
@@ -202,7 +228,7 @@
                     <div style="display: flex; gap: 20px; margin-top: 15px; margin-bottom: 20px;">
                         <label style="cursor: pointer;">
                             <input type="radio" name="upload-mode" value="auto" checked>
-                            Auto Upload (max 60MB/file)
+                            Auto Upload
                         </label>
                         <label style="cursor: pointer;">
                             <input type="radio" name="upload-mode" value="manual">
@@ -212,7 +238,7 @@
 
                     <!-- Auto Upload Input -->
                     <div id="auto-upload-box">
-                        <p>Select the complete Unity WebGL build folder.</p>
+                        <p id="upload-instruction-text">Select the complete WebGL build folder.</p>
                         <input
                             id="unity-build"
                             type="file"
@@ -236,7 +262,7 @@
                         <code style="display: block; padding: 10px; background: #111; margin-bottom: 10px; color: #fff;">
                             GameBuildFilesUnityWeb / <span id="manual-slug-hint">game-slug</span> / <span id="manual-version-hint">v...</span> /
                         </code>
-                        <p><strong>Step 2:</strong> Submit this form. The server will verify if <code>index.html</code> is live on GitHub.</p>
+                        <p><strong>Step 2:</strong> Submit this form. The server will verify if your build is live on GitHub.</p>
                     </div>
 
                 </div>
