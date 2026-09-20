@@ -181,6 +181,94 @@
         </section>
 
 
+        <!-- Reviews & Feedback -->
+        <section
+            id="feedback"
+            class="section"
+        >
+
+            <div class="section-header">
+
+                <span class="section-number">
+                    03
+                </span>
+
+                <div>
+
+                    <p class="section-label">
+                        COMMUNITY FEEDBACK
+                    </p>
+
+                    <h2>
+                        Reviews & Ratings
+                    </h2>
+
+                </div>
+
+            </div>
+
+
+            <!-- Average Rating Box -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255, 255, 255, 0.03); border: 1px solid #222; padding: 20px; border-radius: 8px; margin-bottom: 30px;">
+                <div>
+                    <span class="section-label">AVERAGE RATING</span>
+                    <h3 style="margin-top: 5px; font-size: 20px;">Player Score</h3>
+                </div>
+                <div style="text-align: right;">
+                    <div id="average-rating-stars" style="font-size: 28px; color: #00e5a0; letter-spacing: 2px;">☆☆☆☆☆</div>
+                    <p id="average-rating-text" style="margin-top: 5px; color: #888; font-size: 14px;">Nog geen beoordelingen</p>
+                </div>
+            </div>
+
+
+            <!-- Feedback Form -->
+            <form id="feedback-form" style="background: rgba(255, 255, 255, 0.03); border: 1px solid #222; padding: 25px; border-radius: 8px; margin-bottom: 40px;">
+                <h3 style="margin-bottom: 10px;">Leave a review</h3>
+                <p style="color: #888; margin-bottom: 20px; font-size: 14px;">Let the developer know what you think of this game!</p>
+                
+                <div class="rating-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: bold;">Rating</label>
+                    <div id="star-rating" style="display: flex; gap: 10px; font-size: 30px; cursor: pointer; user-select: none;">
+                        <span data-value="1">☆</span>
+                        <span data-value="2">☆</span>
+                        <span data-value="3">☆</span>
+                        <span data-value="4">☆</span>
+                        <span data-value="5">☆</span>
+                    </div>
+                    <input type="hidden" id="selected-rating" value="0" required>
+                    <small id="rating-text" style="color: #888; display: block; margin-top: 5px;">0 / 5 stars selected</small>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label for="feedback-comment" style="display: block; margin-bottom: 8px; font-weight: bold;">Comment (optional)</label>
+                    <textarea 
+                        id="feedback-comment" 
+                        rows="4" 
+                        placeholder="What did you enjoy, or what could be improved?"
+                        style="width: 100%; padding: 12px; background: #111; color: #fff; border: 1px solid #333; border-radius: 6px; resize: vertical; font-family: inherit;"
+                    ></textarea>
+                </div>
+
+                <button type="submit" class="button button-primary">
+                    SUBMIT REVIEW <span>→</span>
+                </button>
+                <p id="feedback-message" style="margin-top: 15px; font-weight: bold;"></p>
+            </form>
+
+
+            <!-- Reviews List -->
+            <div>
+                <span class="section-label" style="margin-bottom: 15px; display: block;">ALL REVIEWS</span>
+                <div id="feedback-list" class="build-list" style="display: flex; flex-direction: column; gap: 15px;">
+                    <div class="loading">
+                        Loading reviews...
+                    </div>
+                </div>
+            </div>
+
+        </section>
+
+
         <!-- Footer -->
         <footer>
 
