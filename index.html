@@ -1,24 +1,19 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <title>Game Builds — Indie Game Platform & Archive</title>
+    <meta
+        name="description"
+        content="Play early builds, test experimental games, and follow indie game development."
+    >
 
-<title>My Game — Development Builds</title>
-<meta
-    name="description"
-    content="Development builds and updates for my game."
->
-
-<link rel="stylesheet" href="style.css">
-
-
+    <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-
 
 <!-- Background -->
 <div class="background-grid"></div>
@@ -31,7 +26,7 @@
     <div class="nav-container">
 
         <a href="index.html" class="logo">
-            MY<span>GAME</span>
+            GAME<span>BUILDS</span>
         </a>
 
         <nav>
@@ -45,42 +40,40 @@
 </header>
 
 
-<!-- Hero -->
+<!-- Main -->
 <main>
 
+    <!-- Hero Platform Intro -->
     <section class="hero">
 
         <div class="hero-content">
 
             <div class="status-badge">
                 <span class="status-dot"></span>
-                GAME IN DEVELOPMENT
+                INDIE GAME PLATFORM
             </div>
 
             <h1>
-                MY GAME
+                PLAY & TEST<br>EARLY GAME BUILDS
             </h1>
 
             <p class="hero-subtitle">
-                A game currently in development.
+                A hub for developers and playtesters to share, test, and review upcoming indie games.
             </p>
 
             <p class="hero-description">
-                This is an unfinished build of the game.
-                You can play the latest version to see how far
-                development has progressed. New builds and updates
-                will be added over time.
+                Explore WebGL browser games, download desktop builds, test raw prototypes, and leave feedback for developers to help shape their games during development.
             </p>
 
             <div class="hero-buttons">
 
-                <a href="#latest" class="button button-primary">
-                    PLAY LATEST BUILD
+                <a href="games.html" class="button button-primary">
+                    BROWSE ALL GAMES
                     <span>→</span>
                 </a>
 
-                <a href="#history" class="button button-secondary">
-                    VIEW BUILD HISTORY
+                <a href="dashboard.html" class="button button-secondary">
+                    UPLOAD YOUR GAME
                 </a>
 
             </div>
@@ -90,7 +83,43 @@
     </section>
 
 
-    <!-- About -->
+    <!-- Admin / Creator Spotlight -->
+    <section id="admin-spotlight" class="section" style="background: rgba(0, 229, 160, 0.03); border: 1px solid rgba(0, 229, 160, 0.2); border-radius: 12px; padding: 30px; margin-bottom: 50px;">
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <span class="status-badge" style="background: rgba(0, 229, 160, 0.1); color: #00e5a0; border-color: #00e5a0;">
+                    <span class="status-dot" style="background: #00e5a0;"></span>
+                    PLATFORM CREATOR
+                </span>
+                
+                <h2 style="margin-top: 15px; font-size: 28px;">
+                    Hi, I'm <span id="admin-name" style="color: #00e5a0;">Lucas</span> 👋
+                </h2>
+                
+                <p style="color: #ccc; max-width: 600px; margin-top: 10px; line-height: 1.6;">
+                    Welcome to my indie game archive! I built this platform to showcase my own game development projects and to host builds for my friends. Check out my latest games below!
+                </p>
+            </div>
+
+            <div id="admin-badge" style="background: #111; padding: 15px 20px; border-radius: 8px; border: 1px solid #333; text-align: right;">
+                <span class="section-label">ROLE</span>
+                <p style="color: #fff; font-weight: bold; margin-top: 2px;">Admin & Platform Creator</p>
+            </div>
+        </div>
+
+        <!-- Admin Games Grid -->
+        <div style="margin-top: 30px;">
+            <span class="section-label" style="display: block; margin-bottom: 15px;">MY FEATURED GAMES</span>
+            <div id="admin-games-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 15px;">
+                <div class="loading">Loading admin projects...</div>
+            </div>
+        </div>
+
+    </section>
+
+
+    <!-- Platform Stats & About -->
     <section id="about" class="section">
 
         <div class="section-header">
@@ -98,8 +127,8 @@
             <span class="section-number">01</span>
 
             <div>
-                <p class="section-label">ABOUT THE PROJECT</p>
-                <h2>Work in Progress</h2>
+                <p class="section-label">ABOUT THE PLATFORM</p>
+                <h2>Built for Game Developers</h2>
             </div>
 
         </div>
@@ -110,21 +139,15 @@
             <div class="about-text">
 
                 <p>
-                    Welcome to the development page for my game.
-                    The game is still unfinished and actively being
-                    developed.
+                    Welcome to Game Builds! This platform is designed to make sharing early game builds simple and direct, whether made in Unity, Godot, or custom engines.
                 </p>
 
                 <p>
-                    Every build represents a different point in
-                    development. Some versions may contain bugs,
-                    unfinished features or experimental gameplay.
+                    Developers can push WebGL builds directly to the browser or upload downloadable desktop executables (.zip / .exe) along with active changelogs.
                 </p>
 
                 <p>
-                    The goal of this website is to keep track of
-                    the development process and allow everyone to
-                    play previous versions of the game.
+                    Players can jump right into games, test new versions as development progresses, and leave ratings and feedback to help developers improve their games.
                 </p>
 
             </div>
@@ -133,23 +156,23 @@
             <div class="info-card">
 
                 <div class="info-row">
-                    <span>ENGINE</span>
-                    <strong>Unity</strong>
+                    <span>SUPPORTED ENGINES</span>
+                    <strong>Unity, Godot & WebGL</strong>
                 </div>
 
                 <div class="info-row">
-                    <span>PLATFORM</span>
-                    <strong>WebGL</strong>
+                    <span>BUILD TYPES</span>
+                    <strong>Browser & Desktop (.exe)</strong>
                 </div>
 
                 <div class="info-row">
-                    <span>STATUS</span>
-                    <strong class="green">IN DEVELOPMENT</strong>
+                    <span>PLATFORM STATUS</span>
+                    <strong class="green">ONLINE</strong>
                 </div>
 
                 <div class="info-row">
-                    <span>BUILDS</span>
-                    <strong id="build-count">0</strong>
+                    <span>TOTAL GAMES</span>
+                    <strong id="platform-game-count">Loading...</strong>
                 </div>
 
             </div>
@@ -159,63 +182,33 @@
     </section>
 
 
-    <!-- Latest Build -->
-    <section id="latest" class="section latest-section">
+    <!-- Featured / Latest Games Section -->
+    <section id="latest-games" class="section">
 
         <div class="section-header">
 
             <span class="section-number">02</span>
 
             <div>
-                <p class="section-label">CURRENT VERSION</p>
-                <h2>Latest Build</h2>
+                <p class="section-label">COMMUNITY PROJECTS</p>
+                <h2>Explore All Games</h2>
             </div>
 
         </div>
 
 
-        <div id="latest-build-container">
+        <div id="games-grid" class="build-list" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;">
 
             <div class="loading">
-                Loading latest build...
+                Loading games...
             </div>
 
         </div>
 
-    </section>
-
-
-    <!-- Build History -->
-    <section id="history" class="section">
-
-        <div class="section-header">
-
-            <span class="section-number">03</span>
-
-            <div>
-                <p class="section-label">DEVELOPMENT TIMELINE</p>
-                <h2>Build History</h2>
-            </div>
-
-        </div>
-
-
-        <div class="history-intro">
-
-            <p>
-                Every playable build is kept here so you can see
-                how the game has evolved over time.
-            </p>
-
-        </div>
-
-
-        <div id="build-history" class="build-list">
-
-            <div class="loading">
-                Loading build history...
-            </div>
-
+        <div style="margin-top: 30px; text-align: center;">
+            <a href="games.html" class="button button-secondary">
+                VIEW ALL GAMES IN CATALOG <span>→</span>
+            </a>
         </div>
 
     </section>
@@ -229,19 +222,19 @@
             <div>
 
                 <a href="index.html" class="logo">
-                    MY<span>GAME</span>
+                    GAME<span>BUILDS</span>
                 </a>
 
                 <p>
-                    An independent game currently in development.
+                    An independent indie game hosting & testing archive.
                 </p>
 
             </div>
 
 
             <div class="footer-right">
-                BUILD ARCHIVE<br>
-                <span id="footer-build-count">0 BUILDS</span>
+                GAME PLATFORM<br>
+                <span id="footer-game-count">0 GAMES</span>
             </div>
 
         </div>
@@ -249,8 +242,8 @@
 
         <div class="footer-bottom">
 
-            <span>© 2026 My Game</span>
-            <span>Built with Unity & WebGL</span>
+            <span>© 2026 Game Builds</span>
+            <span>Created for Indie Game Developers</span>
 
         </div>
 
@@ -263,7 +256,6 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase.js"></script>
 <script src="script.js"></script>
-```
 
 </body>
 </html>

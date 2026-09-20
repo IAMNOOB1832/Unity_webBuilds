@@ -1,22 +1,5 @@
 /* =========================================
-   BUILD WEBSITE
-========================================= */
-
-const latestContainer =
-    document.getElementById("latest-build-container");
-
-const historyContainer =
-    document.getElementById("build-history");
-
-const buildCount =
-    document.getElementById("build-count");
-
-const footerBuildCount =
-    document.getElementById("footer-build-count");
-
-
-/* =========================================
-   SUPABASE
+   HOMEPAGE SCRIPT (index.html)
 ========================================= */
 
 const supabaseClient = window.supabase.createClient(
@@ -24,327 +7,122 @@ const supabaseClient = window.supabase.createClient(
     SUPABASE_KEY
 );
 
+const gamesGrid = document.getElementById("games-grid");
+const adminGamesGrid = document.getElementById("admin-games-grid");
+const platformGameCount = document.getElementById("platform-game-count");
+const footerGameCount = document.getElementById("footer-game-count");
 
-/* =========================================
-   LOAD BUILDS
-========================================= */
-
-async function loadBuilds() {
-
+async function loadHomepage() {
     try {
+        // Haal alle games op inclusief de eigenaar profielen
+        const { data: games, error } = await supabaseClient
+            .from("games")
+            .select(`
+                id,
+                name,
+                slug,
+                description,
+                created_at,
+                profiles (
+                    username,
+                    display_name
+                )
+            `)
+            .order("created_at", { ascending: false });
 
-        /*
-         * Find Pancakeria.
-         */
+        if (error) throw error;
 
-        const { data: game, error: gameError } =
-            await supabaseClient
-                .from("games")
-                .select("id, name, slug")
-                .eq("slug", "pancakeria")
-                .single();
-
-        if (gameError) {
-            throw gameError;
-        }
-
-
-        /*
-         * Load all builds for Pancakeria.
-         * Newest build first.
-         */
-
-        const { data: builds, error: buildsError } =
-            await supabaseClient
-                .from("builds")
-                .select(`
-                    id,
-                    version,
-                    build_date,
-                    status,
-                    description,
-                    url,
-                    created_at,
-                    build_changelog (
-                        change_text
-                    )
-                `)
-                .eq("game_id", game.id)
-                .order("build_date", {
-                    ascending: false
-                });
-
-        if (buildsError) {
-            throw buildsError;
-        }
-
-
-        if (!Array.isArray(builds) || builds.length === 0) {
-
-            latestContainer.innerHTML = `
-                <div class="loading">
-                    No builds available yet.
-                </div>
-            `;
-
-            historyContainer.innerHTML = `
-                <div class="loading">
-                    No build history available yet.
-                </div>
-            `;
-
-            buildCount.textContent = "0";
-
-            footerBuildCount.textContent = "0 BUILDS";
-
+        if (!games || games.length === 0) {
+            if (gamesGrid) gamesGrid.innerHTML = "<p style='color:#888;'>No games published yet. Be the first to upload one!</p>";
+            if (adminGamesGrid) adminGamesGrid.innerHTML = "<p style='color:#888;'>No admin games uploaded yet.</p>";
+            if (platformGameCount) platformGameCount.textContent = "0";
+            if (footerGameCount) footerGameCount.textContent = "0 GAMES";
             return;
         }
 
+        // Tellers bijwerken
+        if (platformGameCount) platformGameCount.textContent = games.length;
+        if (footerGameCount) footerGameCount.textContent = `${games.length} ${games.length === 1 ? 'GAME' : 'GAMES'}`;
 
-        /*
-         * Convert Supabase data to the format
-         * our existing rendering functions expect.
-         */
+        /* =========================================
+           1. ADMIN / LUCAS GAMES SPOTLIGHT
+        ========================================= */
+        if (adminGamesGrid) {
+            // Zoekt op profielen waar de naam 'lucas' of 'admin' in voorkomt
+            const myGames = games.filter(g => {
+                const username = (g.profiles?.username || g.profiles?.display_name || "").toLowerCase();
+                return username.includes("lucas") || username.includes("admin");
+            });
 
-        const formattedBuilds = builds.map(build => ({
+            if (myGames.length > 0) {
+                adminGamesGrid.innerHTML = myGames.map(game => `
+                    <div class="latest-card" style="padding: 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0, 229, 160, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="section-label" style="color: #00e5a0;">ADMIN PROJECT</span>
+                            <h4 style="font-size: 18px; margin: 6px 0 10px 0; color: #fff;">${escapeHTML(game.name)}</h4>
+                            <p style="color: #aaa; font-size: 13px; margin-bottom: 15px; line-height: 1.4;">
+                                ${escapeHTML(game.description || "No description provided.")}
+                            </p>
+                        </div>
+                        <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="padding: 8px 12px; font-size: 13px; text-align: center; justify-content: center;">
+                            PLAY MY GAME <span>→</span>
+                        </a>
+                    </div>
+                `).join("");
+            } else {
+                // Fallback: Als er nog geen match is, toont hij gewoon de allereerste game
+                const firstGame = games[0];
+                adminGamesGrid.innerHTML = `
+                    <div class="latest-card" style="padding: 18px; background: rgba(0,0,0,0.4); border: 1px solid rgba(0, 229, 160, 0.3); display: flex; flex-direction: column; justify-content: space-between;">
+                        <div>
+                            <span class="section-label" style="color: #00e5a0;">ADMIN PROJECT</span>
+                            <h4 style="font-size: 18px; margin: 6px 0 10px 0; color: #fff;">${escapeHTML(firstGame.name)}</h4>
+                            <p style="color: #aaa; font-size: 13px; margin-bottom: 15px; line-height: 1.4;">
+                                ${escapeHTML(firstGame.description || "No description provided.")}
+                            </p>
+                        </div>
+                        <a href="game.html?slug=${escapeAttribute(firstGame.slug)}" class="button button-primary" style="padding: 8px 12px; font-size: 13px; text-align: center; justify-content: center;">
+                            PLAY GAME <span>→</span>
+                        </a>
+                    </div>
+                `;
+            }
+        }
 
-            id: build.id,
+        /* =========================================
+           2. COMMUNITY GAMES GRID
+        ========================================= */
+        if (gamesGrid) {
+            const featuredGames = games.slice(0, 6);
 
-            version: build.version,
+            gamesGrid.innerHTML = featuredGames.map(game => {
+                const authorName = game.profiles?.display_name || game.profiles?.username || "Unknown Developer";
 
-            date: formatDate(build.build_date),
-
-            status: build.status,
-
-            description: build.description,
-
-            url: build.url,
-
-            changelog:
-                build.build_changelog?.map(
-                    item => item.change_text
-                ) || []
-
-        }));
-
-
-        /*
-         * The first build is the latest build.
-         */
-
-        const latestBuild = formattedBuilds[0];
-
-
-        /* Build counter */
-
-        buildCount.textContent =
-            formattedBuilds.length;
-
-        footerBuildCount.textContent =
-            `${formattedBuilds.length} ${
-                formattedBuilds.length === 1
-                    ? "BUILD"
-                    : "BUILDS"
-            }`;
-
-
-        /* Render latest build */
-
-        renderLatestBuild(latestBuild);
-
-
-        /* Render history */
-
-        renderBuildHistory(formattedBuilds);
-
+                return `
+                    <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                        <div>
+                            <span class="section-label">BY ${escapeHTML(authorName).toUpperCase()}</span>
+                            <h3 style="font-size: 20px; margin-top: 5px; margin-bottom: 10px;">${escapeHTML(game.name)}</h3>
+                            <p style="color: #aaa; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
+                                ${escapeHTML(game.description || "No description provided.")}
+                            </p>
+                        </div>
+                        <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="text-align: center; justify-content: center;">
+                            VIEW GAME <span>→</span>
+                        </a>
+                    </div>
+                `;
+            }).join("");
+        }
 
     } catch (error) {
-
-        console.error("Could not load builds:", error);
-
-        latestContainer.innerHTML = `
-            <div class="loading">
-                Unable to load builds.
-            </div>
-        `;
-
-        historyContainer.innerHTML = `
-            <div class="loading">
-                Unable to load build history.
-            </div>
-        `;
+        console.error("Error loading homepage:", error);
+        if (gamesGrid) gamesGrid.innerHTML = "<p style='color:#ff4d4d;'>Could not load featured games.</p>";
     }
 }
-
-
-/* =========================================
-   DATE FORMAT
-========================================= */
-
-function formatDate(date) {
-
-    if (!date) {
-        return "";
-    }
-
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) {
-        return String(date);
-    }
-
-    return parsedDate.toLocaleDateString(
-        "en-GB",
-        {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric"
-        }
-    );
-}
-
-
-/* =========================================
-   LATEST BUILD
-========================================= */
-
-function renderLatestBuild(build) {
-
-    const changelog = build.changelog || [];
-
-    const changelogHTML =
-        changelog.length > 0
-            ? `
-                <div class="changelog">
-
-                    <div class="changelog-title">
-                        WHAT'S NEW
-                    </div>
-
-                    <ul>
-                        ${changelog
-                            .map(
-                                item =>
-                                    `<li>${escapeHTML(item)}</li>`
-                            )
-                            .join("")}
-                    </ul>
-
-                </div>
-            `
-            : "";
-
-
-    latestContainer.innerHTML = `
-
-        <div class="latest-card">
-
-            <div class="build-top">
-
-                <div>
-                    <div class="version">
-                        ${escapeHTML(build.version)}
-                    </div>
-
-                    <div class="build-date">
-                        ${escapeHTML(build.date)}
-                    </div>
-                </div>
-
-                <div class="build-status">
-                    ${escapeHTML(build.status)}
-                </div>
-
-            </div>
-
-
-            <p class="build-description">
-                ${escapeHTML(build.description)}
-            </p>
-
-
-            ${changelogHTML}
-
-
-            <a
-                href="${escapeAttribute(build.url)}"
-                class="button button-primary play-latest"
-            >
-                PLAY THIS BUILD
-                <span>→</span>
-            </a>
-
-        </div>
-    `;
-}
-
-
-/* =========================================
-   BUILD HISTORY
-========================================= */
-
-function renderBuildHistory(builds) {
-
-    historyContainer.innerHTML = "";
-
-
-    builds.forEach(build => {
-
-        const item = document.createElement("div");
-
-        item.className = "history-item";
-
-
-        item.innerHTML = `
-
-            <div class="history-version">
-                ${escapeHTML(build.version)}
-            </div>
-
-
-            <div class="history-date">
-                ${escapeHTML(build.date)}
-            </div>
-
-
-            <div class="history-description">
-
-                ${escapeHTML(build.description)}
-
-            </div>
-
-
-            <div class="history-action">
-
-                <a
-                    href="${escapeAttribute(build.url)}"
-                    class="play-small"
-                >
-                    PLAY
-                    <span>→</span>
-                </a>
-
-            </div>
-
-        `;
-
-
-        historyContainer.appendChild(item);
-
-    });
-}
-
-
-/* =========================================
-   SECURITY
-========================================= */
 
 function escapeHTML(value) {
-
-    if (value === undefined || value === null) {
-        return "";
-    }
-
+    if (value === undefined || value === null) return "";
     return String(value)
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -353,22 +131,12 @@ function escapeHTML(value) {
         .replace(/'/g, "&#039;");
 }
 
-
 function escapeAttribute(value) {
-
-    if (value === undefined || value === null) {
-        return "#";
-    }
-
+    if (value === undefined || value === null) return "#";
     return String(value)
         .replace(/"/g, "%22")
         .replace(/</g, "%3C")
         .replace(/>/g, "%3E");
 }
 
-
-/* =========================================
-   START
-========================================= */
-
-loadBuilds();
+loadHomepage();
