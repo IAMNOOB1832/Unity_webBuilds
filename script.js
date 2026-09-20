@@ -102,30 +102,31 @@ async function loadHomepage() {
         /*
          * 4. COMMUNITY GAMES GRID
          */
-        if (gamesGrid) {
-            const featuredGames = games.slice(0, 6);
+    if (gamesGrid) {
+                const featuredGames = games.slice(0, 6);
 
-            gamesGrid.innerHTML = featuredGames.map(game => {
-                const profile = Array.isArray(game.profiles) ? game.profiles[0] : game.profiles;
-                // Pakt nu altijd direct de unieke username
-                const username = profile?.username || "developer";
+                gamesGrid.innerHTML = featuredGames.map(game => {
+                    const profile = Array.isArray(game.profiles) ? game.profiles[0] : game.profiles;
+                    
+                    // Pakt eerst de unieke username, anders display_name, anders fallback
+                    const authorName = profile?.username || profile?.display_name || "COMMUNITY DEV";
 
-                return `
-                    <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                        <div>
-                            <span class="section-label">BY ${escapeHTML(username).toUpperCase()}</span>
-                            <h3 style="font-size: 20px; margin-top: 5px; margin-bottom: 10px;">${escapeHTML(game.name)}</h3>
-                            <p style="color: #aaa; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
-                                ${escapeHTML(game.description || "No description provided.")}
-                            </p>
+                    return `
+                        <div class="latest-card" style="display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                            <div>
+                                <span class="section-label">BY ${escapeHTML(authorName).toUpperCase()}</span>
+                                <h3 style="font-size: 20px; margin-top: 5px; margin-bottom: 10px;">${escapeHTML(game.name)}</h3>
+                                <p style="color: #aaa; font-size: 14px; line-height: 1.5; margin-bottom: 15px;">
+                                    ${escapeHTML(game.description || "No description provided.")}
+                                </p>
+                            </div>
+                            <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="text-align: center; justify-content: center;">
+                                VIEW GAME <span>→</span>
+                            </a>
                         </div>
-                        <a href="game.html?slug=${escapeAttribute(game.slug)}" class="button button-primary" style="text-align: center; justify-content: center;">
-                            VIEW GAME <span>→</span>
-                        </a>
-                    </div>
-                `;
-            }).join("");
-        }
+                    `;
+                }).join("");
+            }
 
     } catch (error) {
         console.error("Error loading homepage:", error);
