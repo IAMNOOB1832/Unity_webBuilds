@@ -21,6 +21,9 @@ const selectedFilesText = document.getElementById("selected-files");
 // Upload modus & Build type elementen
 const uploadModeRadios = document.querySelectorAll('input[name="upload-mode"]');
 const buildTypeRadios = document.querySelectorAll('input[name="build-type"]');
+const autoUploadRadio = document.getElementById("upload-mode-auto");
+const manualUploadRadio = document.getElementById("upload-mode-manual");
+const autoUploadLabel = document.getElementById("auto-upload-label");
 const autoUploadBox = document.getElementById("auto-upload-box");
 const manualUploadBox = document.getElementById("manual-upload-box");
 const manualSlugHint = document.getElementById("manual-slug-hint");
@@ -39,8 +42,34 @@ let currentGame = null;
 ========================= */
 
 function updateFormInputsState() {
-    const uploadMode = (document.querySelector('input[name="upload-mode"]:checked') || {}).value || "auto";
     const buildType = (document.querySelector('input[name="build-type"]:checked') || {}).value || "web";
+
+    // Als Desktop Build (.exe / .zip) is geselecteerd: Disable Auto Upload vanwege bestandsgrootte
+    if (buildType === "executable") {
+        if (autoUploadRadio) {
+            autoUploadRadio.disabled = true;
+        }
+        if (autoUploadLabel) {
+            autoUploadLabel.style.opacity = "0.4";
+            autoUploadLabel.style.cursor = "not-allowed";
+            autoUploadLabel.title = "Auto Upload is unavailable for desktop builds due to file size limits. Please use Manual Upload.";
+        }
+        // Schakel automatisch over naar Manual Upload
+        if (manualUploadRadio) {
+            manualUploadRadio.checked = true;
+        }
+    } else {
+        if (autoUploadRadio) {
+            autoUploadRadio.disabled = false;
+        }
+        if (autoUploadLabel) {
+            autoUploadLabel.style.opacity = "1";
+            autoUploadLabel.style.cursor = "pointer";
+            autoUploadLabel.title = "";
+        }
+    }
+
+    const uploadMode = (document.querySelector('input[name="upload-mode"]:checked') || {}).value || "auto";
 
     if (uploadMode === "manual") {
         if (autoUploadBox) autoUploadBox.style.display = "none";
@@ -58,9 +87,9 @@ function updateFormInputsState() {
             unityBuildInput.removeAttribute("directory");
             unityBuildInput.setAttribute("accept", ".zip,.exe,.rar,.7z");
         }
-        if (uploadInstructionText) uploadInstructionText.textContent = "Select your .zip or .exe build file.";
+        if (uploadInstructionText) uploadInstructionText.textContent = "Desktop builds must be uploaded manually via GitHub Desktop using Git LFS.";
         if (selectedFilesText && (!unityBuildInput || !unityBuildInput.files.length)) {
-            selectedFilesText.textContent = "No .zip / .exe selected.";
+            selectedFilesText.textContent = "Please use Manual Upload with a .zip file.";
         }
     } else {
         if (unityBuildInput) {
@@ -332,7 +361,7 @@ addBuildForm.addEventListener("submit", async event => {
         let downloadUrl = null;
 
         if (uploadMode === "manual") {
-            // Manual Upload Flow
+            // Manual Upload Flow (zoekt automatisch index.html of de .zip/.exe naam op GitHub)
             formMessage.textContent = "Verifying manual upload on GitHub...";
 
             const { data: verifyData, error: verifyError } = await supabaseClient.functions.invoke("verify-github-build", {
@@ -347,121 +376,85 @@ addBuildForm.addEventListener("submit", async event => {
                 throw new Error(verifyError?.message || verifyData?.error || "GitHub verification failed.");
             }
 
-            // Gebruik exact de URL die de Edge Function heeft gevonden (inclusief exacte zip-bestandsnaam)
             buildUrl = verifyData.buildUrl;
             if (buildType === "executable") {
                 downloadUrl = verifyData.buildUrl;
             }
 
         } else {
-            // Auto Upload Flow
-            if (buildType === "executable") {
-                const files = Array.from(unityBuildInput.files || []);
-                if (files.length === 0) {
-                    formMessage.textContent = "Please select a .zip or .exe file.";
-                    return;
-                }
+            // Auto Upload Flow (alleen beschikbaar voor WebGL)
+            const files = Array.from(unityBuildInput.files || []);
+            if (files.length === 0) {
+                formMessage.textContent = "Please select your WebGL build folder.";
+                return;
+            }
 
-                const exeFile = files[0];
-                formMessage.textContent = `Uploading executable build (${formatBytes(exeFile.size)})...`;
+            const indexFile = files.find(file => {
+                const relativePath = file.webkitRelativePath || file.name;
+                return relativePath.split("/").pop().toLowerCase() === "index.html";
+            });
 
-                const arrayBuffer = await exeFile.arrayBuffer();
+            if (!indexFile) {
+                formMessage.textContent = "The selected folder does not contain index.html.";
+                return;
+            }
+
+            const uploadedFiles = [];
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                let relativePath = file.webkitRelativePath || file.name;
+                const pathParts = relativePath.split("/").filter(Boolean);
+
+                if (pathParts.length > 1) pathParts.shift();
+                relativePath = pathParts.join("/");
+
+                if (!relativePath) throw new Error("Invalid file path.");
+
+                formMessage.textContent = `Uploading file ${i + 1}/${files.length}: ${relativePath}`;
+
+                const arrayBuffer = await file.arrayBuffer();
                 const base64 = arrayBufferToBase64(arrayBuffer);
 
-                const { data: exeUploadData, error: exeUploadError } = await supabaseClient.functions.invoke(
-                    "upload-executable-build",
+                const { data: uploadData, error: uploadError } = await supabaseClient.functions.invoke(
+                    "github-upload-file",
                     {
                         body: {
                             gameSlug: currentGame.slug,
                             version: version,
-                            fileName: exeFile.name,
+                            filePath: relativePath,
                             contentBase64: base64
                         }
                     }
                 );
 
-                if (exeUploadError || !exeUploadData?.success) {
-                    throw new Error(exeUploadError?.message || exeUploadData?.error || "Executable upload failed.");
+                if (uploadError || !uploadData?.success) {
+                    throw new Error(uploadError?.message || uploadData?.error || `Could not upload ${relativePath}.`);
                 }
 
-                downloadUrl = exeUploadData.downloadUrl;
-                buildUrl = exeUploadData.downloadUrl;
-
-            } else {
-                // WebGL Auto Upload
-                const files = Array.from(unityBuildInput.files || []);
-                if (files.length === 0) {
-                    formMessage.textContent = "Please select your WebGL build folder.";
-                    return;
-                }
-
-                const indexFile = files.find(file => {
-                    const relativePath = file.webkitRelativePath || file.name;
-                    return relativePath.split("/").pop().toLowerCase() === "index.html";
-                });
-
-                if (!indexFile) {
-                    formMessage.textContent = "The selected folder does not contain index.html.";
-                    return;
-                }
-
-                const uploadedFiles = [];
-
-                for (let i = 0; i < files.length; i++) {
-                    const file = files[i];
-                    let relativePath = file.webkitRelativePath || file.name;
-                    const pathParts = relativePath.split("/").filter(Boolean);
-
-                    if (pathParts.length > 1) pathParts.shift();
-                    relativePath = pathParts.join("/");
-
-                    if (!relativePath) throw new Error("Invalid file path.");
-
-                    formMessage.textContent = `Uploading file ${i + 1}/${files.length}: ${relativePath}`;
-
-                    const arrayBuffer = await file.arrayBuffer();
-                    const base64 = arrayBufferToBase64(arrayBuffer);
-
-                    const { data: uploadData, error: uploadError } = await supabaseClient.functions.invoke(
-                        "github-upload-file",
-                        {
-                            body: {
-                                gameSlug: currentGame.slug,
-                                version: version,
-                                filePath: relativePath,
-                                contentBase64: base64
-                            }
-                        }
-                    );
-
-                    if (uploadError || !uploadData?.success) {
-                        throw new Error(uploadError?.message || uploadData?.error || `Could not upload ${relativePath}.`);
-                    }
-
-                    uploadedFiles.push({ path: relativePath, sha: uploadData.sha });
-                    await new Promise(resolve => setTimeout(resolve, 0));
-                }
-
-                formMessage.textContent = "All files uploaded. Creating GitHub commit...";
-
-                const { data: commitData, error: commitError } = await supabaseClient.functions.invoke(
-                    "github-create-commit",
-                    {
-                        body: {
-                            gameSlug: currentGame.slug,
-                            version: version,
-                            files: uploadedFiles,
-                            commitMessage: `Add ${currentGame.name} ${version}`
-                        }
-                    }
-                );
-
-                if (commitError || !commitData?.success) {
-                    throw new Error(commitError?.message || commitData?.error || "GitHub commit failed.");
-                }
-
-                buildUrl = commitData.url;
+                uploadedFiles.push({ path: relativePath, sha: uploadData.sha });
+                await new Promise(resolve => setTimeout(resolve, 0));
             }
+
+            formMessage.textContent = "All files uploaded. Creating GitHub commit...";
+
+            const { data: commitData, error: commitError } = await supabaseClient.functions.invoke(
+                "github-create-commit",
+                {
+                    body: {
+                        gameSlug: currentGame.slug,
+                        version: version,
+                        files: uploadedFiles,
+                        commitMessage: `Add ${currentGame.name} ${version}`
+                    }
+                }
+            );
+
+            if (commitError || !commitData?.success) {
+                throw new Error(commitError?.message || commitData?.error || "GitHub commit failed.");
+            }
+
+            buildUrl = commitData.url;
         }
 
         formMessage.textContent = "Saving build metadata...";
